@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-节点IP对应关系 -->
+<mapper namespace="ip4Note">
+	<select id="query" resultType="map">
+		SELECT
+			sendid,
+			sendip,
+			sendport,
+			remark
+		FROM
+			t_sms_sendip_id
+		ORDER BY sendid
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_sendip_id
+	</select>
+	
+	<!-- 根据send节点的Id查询该节点下面挂载的通道数量 -->
+	<select id="querySendMountNum" resultType="int">
+		SELECT COUNT(1) FROM t_sms_channel WHERE sendid = #{sendId} AND state = 1
+	</select>
+</mapper> 

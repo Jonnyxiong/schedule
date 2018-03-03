@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 销售人员管理 -->
+<mapper namespace="salesman">
+	
+	<!--销售人员 -->
+	<select id="query" resultType="map">
+		SELECT
+			s.name AS name,
+			s.email AS email,
+			s.id AS id
+		FROM
+			t_sms_salesman s
+			<if test="name != null">
+				WHERE s.name LIKE concat('%', #{name}, '%')
+			</if>
+		ORDER BY
+			createtime DESC
+		${limit}
+	</select>
+	
+	<!-- 销售人员记录总数 -->
+	<select id="queryCount" resultType="map">
+		SELECT COUNT(1) AS totalCount FROM t_sms_salesman s 
+		<if test="name != null">
+			WHERE s.name LIKE concat('%', #{name}, '%')
+		</if>
+	</select>
+	
+	<insert id="insertSalesman">
+		INSERT INTO t_sms_salesman
+		SELECT #{id},#{name},#{email},NOW() FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM t_sms_salesman s WHERE s.email like TRIM(#{email}))
+	</insert>
+	
+	<delete id="deleteSalesman">
+		DELETE from t_sms_salesman WHERE id = #{id}
+	</delete>
+	
+	<!-- 月回款任务记录 -->
+	<select id="queryTask" resultType="map">
+		SELECT
+			t.id AS id,
+			s. NAME AS salesman_name,
+			t.returned_money_task AS returned_money_task,
+			date_format(t.taskofmoth, '%Y-%m') AS taskofmoth
+		FROM
+			t_sms_salesman_monthly_task t
+		INNER JOIN t_sms_salesman s ON t.salesmanid = s.id
+		WHERE t.taskofmoth BETWEEN #{start_time} AND #{end_time}
+		<if test="name != null">
+			AND s.name LIKE concat('%', #{name}, '%')
+		</if>
+		ORDER BY
+			t.createtime DESC
+		${limit}
+	</select>
+	 
+	<!-- 月回款任务总数 -->
+	<select id="queryTaskCount" resultType="map">
+		SELECT COUNT(1) AS totalCount 
+			FROM t_sms_salesman_monthly_task t
+		INNER JOIN t_sms_salesman s ON t.salesmanid = s.id
+		WHERE t.taskofmoth BETWEEN #{start_time} AND #{end_time}
+		<if test="name != null">
+			AND s.name LIKE concat('%', #{name}, '%')
+		</if>
+	</select>
+	
+	<select id="insertTaskCheck" resultType="map">
+		SELECT COUNT(1) AS totalCount FROM t_sms_salesman_monthly_task t WHERE t.salesmanid = #{salesman_id} AND t.taskofmoth = #{taskofmoth}
+	</select>
+	
+	<!-- 添加月回款任务  -->
+	<insert id="insertTask">
+		INSERT INTO t_sms_salesman_monthly_task 
+		VALUES( NULL, #{salesman_id}, #{returned_money_task}, #{taskofmoth}, NOW() ) 
+	</insert>
+	
+	<!-- 删除月回款任务  -->
+	<delete id="deleteTask">
+		DELETE from t_sms_salesman_monthly_task WHERE id = #{id}
+	</delete>
+	
+	<!-- 销售人员客户充值记录交接 -->
+	<update id="handOverRechargeRecord">
+		UPDATE t_sms_customer_recharge_record r SET r.salesmanid = #{handOverToId} WHERE r.salesmanid = #{id}
+	</update>
+	
+	<!-- 销售人员客户资源交接 -->
+	<update id="handOverCustomer">
+		UPDATE t_sms_customer c SET c.salesmanid = #{handOverToId} WHERE c.salesmanid = #{id}
+	</update>
+	
+</mapper> 

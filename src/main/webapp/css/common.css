@@ -1,0 +1,9 @@
+/*
+	ucpaas-sms 公共样式
+*/
+
+/* select2下拉容器长度 */
+.control-group .select2-container { width: 300px !important; }
+
+/* select2(销售人员)下拉容器长度 */
+.select2-dropdown { width: 300px !important; margin-top: -5px;}

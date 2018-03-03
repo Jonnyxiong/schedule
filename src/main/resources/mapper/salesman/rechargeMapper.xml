@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 充值记录管理 -->
+<mapper namespace="recharge">
+	
+	<!-- 查询所有充值记录 -->
+	<select id="query" resultType="map">
+		SELECT
+			r.id AS id,
+			s.name AS salesman_name,
+			c.name AS customer_name,
+			r.rechargemoney AS recharge_money,
+			r.rechargemark AS recharge_mark,
+			r.recharge_unit_price AS recharge_unit_price,
+			r.recharge_cost_price AS recharge_cost_price,
+			date_format(r.rechargetime, '%Y-%m') AS recharge_time,
+			r.recharge_profit AS recharge_profit,
+			r.recharge_royalty AS recharge_royalty,
+			r.is_remain as is_remain
+		FROM
+			t_sms_customer_recharge_record r
+		INNER JOIN t_sms_customer c ON r.customerid = c.id
+		INNER JOIN t_sms_salesman s ON r.salesmanid = s.id
+		<if test="name != null">
+			WHERE (
+					c.name LIKE concat('%', #{name}, '%')
+					OR s.name LIKE concat('%', #{name}, '%')
+				  )
+		</if>
+		AND r.rechargetime BETWEEN #{start_time} AND #{end_time}
+		ORDER BY r.createtime DESC
+		${limit}
+	</select>
+	
+	<!-- 充值记录总数 -->
+	<select id="queryCount" resultType="map">
+		SELECT 
+			COUNT(1) AS totalCount 
+		FROM 
+			t_sms_customer_recharge_record r
+		INNER JOIN t_sms_customer c ON r.customerid = c.id
+		INNER JOIN t_sms_salesman s ON r.salesmanid = s.id
+		<if test="name != null">
+			WHERE (
+					c.name LIKE concat('%', #{name}, '%')
+					OR s.name LIKE concat('%', #{name}, '%')
+			)
+		</if>
+		AND r.rechargetime BETWEEN #{start_time} AND #{end_time}
+	</select>
+	
+	<insert id="insertRecharge">
+		INSERT INTO t_sms_customer_recharge_record
+		VALUES
+			(   NULL, 
+				#{salesman_id},
+				#{customer_id},
+				(SELECT c.name FROM t_sms_customer c WHERE c.id = #{customer_id}),
+				#{recharge_money}, 
+				#{recharge_mark}, 
+				#{recharge_unit_price}, 
+				#{recharge_cost_price}, 
+				#{rechargetime}, 
+				NOW(), 
+				IF((#{is_remain}-1),#{recharge_money} / #{recharge_unit_price} * (#{recharge_unit_price} - #{recharge_cost_price}),0),
+				IF((#{is_remain}-1),(#{recharge_money} / #{recharge_unit_price} * (#{recharge_unit_price} - #{recharge_cost_price}))*0.1,0),
+				#{is_remain}
+			)				
+	</insert>
+	
+	<delete id="deleteRecharge">
+		DELETE from t_sms_customer_recharge_record WHERE id = #{id}
+	</delete>
+	
+	<!-- 通过客户id查询对应销售 -->
+	<select id="getSalesmanById" resultType="map">
+		SELECT
+			s.id,
+			s.name
+		FROM
+			t_sms_salesman s
+		WHERE
+			s.id = (
+				SELECT
+					salesmanid
+				FROM
+					t_sms_customer
+				WHERE
+					id = #{customer_id}
+			)
+	</select>
+	
+</mapper> 

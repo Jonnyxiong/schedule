@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 组件管理-SMSP组件与MQ关联配置 -->
+<mapper namespace="mqRelation">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="message_type != null and message_type != ''">
+				cm.message_type = #{message_type}
+			</if>
+			<if test="component_id_search != null and component_id_search != ''">
+				AND	cm.component_id = #{component_id_search}
+			</if>
+			<if test="mq_id != null and mq_id != ''">
+				AND	cm.mq_id = #{mq_id}
+			</if>
+			<if test="mode != null and mode != ''">
+				AND	cm.mode = #{mode}
+			</if>
+		</where>
+	</sql>
+
+	<select id="query" resultType="map">
+		SELECT
+			cm.`id`,
+			CONCAT(cm.`component_id`, "（", co.`component_name`, "）") AS component_id,
+			cm.`message_type`,
+			cm.`mode`,
+			CONCAT(cm.`mq_id`, "（", mq.`queue_name`, "）") AS mq_id,
+			cm.`get_rate`,
+			cm.`remark`,
+			date_format(
+				cm.update_date,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_date
+		FROM
+			t_sms_component_ref_mq cm
+		INNER JOIN t_sms_mq_configure mq
+		ON cm.mq_id = mq.mq_id
+		INNER JOIN t_sms_component_configure co
+		ON cm.component_id = co.component_id
+		<include refid="queryCommon"/>
+		ORDER BY cm.component_id ASC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_component_ref_mq cm
+		INNER JOIN t_sms_mq_configure mq
+		ON cm.mq_id = mq.mq_id
+		INNER JOIN t_sms_component_configure co
+		ON cm.component_id = co.component_id
+		<include refid="queryCommon"/>
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			`id`,
+			`component_id`,
+			`message_type`,
+			`mode`,
+			`mq_id`,
+			`get_rate`,
+			`remark`,
+			`update_date`
+		FROM
+			t_sms_component_ref_mq
+		WHERE
+			id = #{id}
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO `t_sms_component_ref_mq` (
+			`id`,
+			`component_id`,
+			`message_type`,
+			`mode`,
+			`mq_id`,
+			`get_rate`,
+			`remark`,
+			`update_date`
+		)
+		VALUES
+			(
+				#{id},
+				#{component_id},
+				#{message_type},
+				#{mode},
+				#{mq_id},
+				#{get_rate},
+				#{remark},
+				NOW()
+			)
+	</insert>
+	
+	<insert id="insertMqRelationList">
+		INSERT INTO `t_sms_component_ref_mq` (
+			`component_id`,
+			`message_type`,
+			`mode`,
+			`mq_id`,
+			`get_rate`,
+			`update_date`
+		)
+		VALUES
+			<foreach collection="insertList"  item="i" separator=",">
+			(
+				#{i.component_id},
+				#{i.message_type},
+				#{i.mode},
+				#{i.mq_id},
+				#{i.get_rate},
+				NOW()
+			)
+			</foreach>
+			
+	</insert>
+	
+	<update id="update">
+		UPDATE `t_sms_component_ref_mq`
+		SET 
+		 `component_id` = #{component_id},
+		 `message_type` = #{message_type},
+		 `mode` = #{mode},
+		 `mq_id` = #{mq_id},
+		 `get_rate` = #{get_rate},
+		 `remark` = #{remark},
+		 `update_date` = NOW()
+		WHERE
+			id = #{id}
+	</update>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_component_ref_mq` WHERE id = #{id}
+	</delete>
+	
+	<select id="queryAllMqQueue" resultType="map">
+		SELECT
+			CONCAT(
+				mq.mq_id,
+				'（',
+				mq.queue_name,
+				'）'
+			) AS label,
+			mq.mq_id AS `value`
+		FROM
+			t_sms_mq_configure mq
+		WHERE
+			message_type != '20' <!-- 组件生产者和消费者中不能选择通道消息队列 -->
+	</select>
+	
+	<select id="getMqInfoById" resultType="map">
+		SELECT
+			`mq_id`,
+			`queue_name`,
+			`message_type`
+		FROM
+			t_sms_mq_configure
+		WHERE
+			mq_id = #{mqId}
+	</select>
+	
+	<select id="queryMqAndCompenontRelationNum" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_component_ref_mq
+		WHERE
+			mq_id = #{mqId}
+		AND component_id = #{componentId}
+		AND `mode` = #{mqMode}
+	</select>
+	
+	<update id="updateMqGetRate">
+		UPDATE t_sms_component_ref_mq SET get_rate = #{get_rate} WHERE id = #{id}
+	</update>
+	
+</mapper> 

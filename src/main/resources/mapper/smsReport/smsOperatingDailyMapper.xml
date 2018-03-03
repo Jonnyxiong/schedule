@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 短信运营日报统计报表 -->
+<mapper namespace="smsOperatingDaily">
+	
+	<select id="query" resultType="map">
+		SELECT
+			o.record_type,
+			o.user_id,
+			o.user_name,
+			o.channel_id,
+			o.consume_total,
+			o.charge_total,
+			o.channel_cost_total,
+			o.channel_sale_total,
+			o.gross_profit,
+			CONCAT(o.gross_margin,'%') AS gross_margin,
+			DATE_FORMAT(o.consume_time,'%Y-%m-%d') AS consume_time
+		FROM
+			t_sms_operating_daily_statistics o
+		<where>
+			<if test="name != null">
+				(
+					o.user_id LIKE CONCAT('%',#{name},'%')
+					OR o.user_name LIKE CONCAT('%',#{name},'%')
+				)
+			</if>
+			AND o.consume_time  BETWEEN #{start_time} AND #{end_time}
+		
+		</where>
+		ORDER BY
+			o.consume_time,
+			o.user_id,
+			o.record_type
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT 
+			COUNT(0) AS totalCount
+		FROM
+			t_sms_operating_daily_statistics o
+		<where>
+			<if test="name != null">
+				(
+					o.user_id LIKE CONCAT('%',#{name},'%')
+					OR o.user_name LIKE CONCAT('%',#{name},'%')
+				)
+			</if>
+			AND o.consume_time  BETWEEN #{start_time} AND #{end_time}
+		
+		</where>
+		ORDER BY
+			o.consume_time,
+			o.user_id,
+			o.record_type
+	</select>
+	
+	<select id="total" resultType="map">
+		SELECT
+			SUM(o.consume_total) AS consume_total,
+			SUM(o.charge_total) AS charge_total,
+			SUM(o.channel_cost_total) AS channel_cost_total,
+			SUM(o.channel_sale_total) AS channel_sale_total,
+			(SUM(o.channel_sale_total) - SUM(o.channel_cost_total)) AS gross_profit,
+			CONCAT(ROUND((SUM(o.channel_sale_total) - SUM(o.channel_cost_total))/SUM(o.channel_sale_total) * 100,2), '%') AS gross_margin,
+			NULL
+		FROM
+			t_sms_operating_daily_statistics o
+		<where>
+			<if test="name != null">
+				(
+					o.user_id LIKE CONCAT('%',#{name},'%')
+					OR o.user_name LIKE CONCAT('%',#{name},'%')
+				)
+			</if>
+			AND o.consume_time  BETWEEN #{start_time} AND #{end_time}
+			AND o.record_type = 2
+		</where>
+			
+	</select>
+	
+</mapper> 

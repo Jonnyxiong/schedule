@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 监控业务 -->
+<mapper namespace="monitor">
+	
+	<!-- (废弃)获取短信记录延迟时间（分钟） -->
+	<select id="getSmsDelay" resultType="_int">
+		SELECT
+			ceiling(p.param_value / 180 + 3) * 3
+		FROM
+			t_sms_param p
+		WHERE
+			p.param_key = 'MAX_RETURN_FAIL'
+	</select>
+	
+	<!-- 获取当前统计的时间点 -->
+	<select id="getStatTime" resultType="map">
+		SELECT
+			date_format(
+				a.end_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS end_time,
+			unix_timestamp(a.end_time) * 1000 AS end_timestamp
+		FROM
+			(
+				SELECT
+					subdate(
+<!-- 						str_to_date(t.execute_next, '%Y%m%d%H%i'), -->
+						t.scan_next,
+						<!-- 统计定时任务正在运行时只能查到两个统计周期前的数据 -->
+						INTERVAL IF(t.status=2,${delay_minute}+3,${delay_minute}) MINUTE
+					) AS end_time
+				FROM
+					t_sms_task t
+				WHERE
+					t.task_id = #{task_id}
+			) a
+		WHERE
+			a.end_time >= #{start_time}
+	</select>
+	
+	<!-- 获取当前查询的结束时间（每3分钟统计） -->
+	<select id="getEndTimeForMinutes" resultType="map">
+		SELECT
+			date_format(
+				b.end_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS end_time,
+			convert(unix_timestamp(b.end_time) * 1000, unsigned) AS end_timestamp
+		FROM
+			(
+				SELECT
+				
+				IF (
+			<![CDATA[a.end_time < #{end_time},]]>
+					a.end_time,
+					#{end_time}
+				) AS end_time
+				FROM
+					(
+						SELECT
+							subdate(
+								str_to_date(t.execute_next, '%Y%m%d%H%i'),
+								INTERVAL ${delay_minute} MINUTE
+							) AS end_time
+						FROM
+							t_sms_task t
+						WHERE
+							t.task_id = #{task_id}
+					) a
+			) b
+	</select>
+	
+	<!-- 获取当前查询的结束时间（每日统计） -->
+	<select id="getEndTimeForDay" resultType="map">
+		SELECT
+			date_format(
+				b.end_time,
+				'%Y-%m-%d'
+			) AS end_time,
+			convert(unix_timestamp(b.end_time) * 1000, unsigned) AS end_timestamp
+		FROM
+			(
+				SELECT
+				
+				IF (
+			<![CDATA[a.end_time < #{end_time},]]>
+					a.end_time,
+					#{end_time}
+				) AS end_time
+				FROM
+					(
+						SELECT
+							subdate(
+								str_to_date(t.execute_next, '%Y%m%d'),
+								INTERVAL 2 Day
+							) AS end_time
+						FROM
+							t_sms_task t
+						WHERE
+							t.task_id =#{task_id}
+					) a
+			) b
+	</select>
+	
+</mapper>

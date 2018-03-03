@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 告警管理-->
+<mapper namespace="alarm">
+	
+	<!-- 分页查询告警管理记录 -->
+	<select id="query" resultType="map">
+		SELECT
+			a.alarm_id,
+			a.channelid,
+			a.submit_failure_number,
+			a.send_failure_number,
+			a.send_failure_codes,
+			a.status,
+			a.create_date,
+			a.update_date
+		FROM
+			t_sms_alarm_condition a
+		WHERE 1=1
+		<if test="channel_id != null">
+			AND a.channelid = #{channel_id}
+		</if>
+		<if test="status != null">
+			AND a.status = #{status}
+		</if>
+		AND a.status != 2
+		ORDER BY
+			a.create_date DESC,a.update_date DESC
+		${limit}
+	</select>
+	
+	<!-- 分页查询查询告警管理 记录总数 -->
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_alarm_condition a
+		WHERE 1=1
+		<if test="channel_id != null">
+			AND a.channelid = #{channel_id}
+		</if>
+		<if test="status != null">
+			AND a.status = #{status}
+		</if>
+		AND a.status != 2
+	</select>
+	
+	<!-- 添加告警条件配置信息 -->
+	<insert id="insertAlarmCondition">
+		INSERT t_sms_alarm_condition
+			(channelid,submit_failure_number,send_failure_number,send_failure_codes,status,create_date)
+		VALUES
+			(#{channel_id},#{submit_failure_number},#{send_failure_number},#{send_failure_codes},#{status},NOW())
+	</insert>
+	
+	<!-- 修改告警条件配置信息 -->
+	<update id="updateAlarmCondition">
+		UPDATE t_sms_alarm_condition
+		SET 
+			channelid = #{channel_id},
+			submit_failure_number = #{submit_failure_number},
+			send_failure_number = #{send_failure_number},
+			send_failure_codes = #{send_failure_codes},
+			update_date = NOW()
+		WHERE alarm_id = #{alarm_id}
+	</update>
+	
+	<!-- 根据通道号查询告警配置信息 查重 -->
+	<select id="getByChannelid" resultType="map">
+		SELECT
+			a.alarm_id,
+			a.channelid,
+			a.submit_failure_number,
+			a.send_failure_number,
+			a.send_failure_codes,
+			a.status,
+			a.create_date,
+			a.update_date
+		FROM t_sms_alarm_condition a
+		WHERE a.channelid = #{channel_id}
+		AND a.status != 2
+		<if test="alarm_id != null">
+			AND a.alarm_id != #{alarm_id}
+		</if>
+	</select>
+	
+	<!-- 根据告警条件ID查询告警配置信息 -->
+	<select id="getByAlarmId" resultType="map">
+		SELECT
+			a.alarm_id,
+			a.channelid,
+			a.submit_failure_number,
+			a.send_failure_number,
+			a.send_failure_codes,
+			a.status,
+			a.create_date,
+			a.update_date
+		FROM t_sms_alarm_condition a
+		WHERE a.alarm_id = #{alarm_id}
+	</select>
+	
+	<!-- 修改告警条件 -->
+	<update id="updateStatus">
+		UPDATE t_sms_alarm_condition a
+		SET a.`status` = #{status}
+		WHERE
+			a.alarm_id = #{alarm_id}
+	</update>
+</mapper> 

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 组件管理-平台错误码管理 -->
+<mapper namespace="smspErrorCodeMgnt">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="component_type != null and component_type != ''">
+				component_type = #{component_type}
+			</if>
+			<if test="syscode != null and syscode != ''">
+				AND
+				syscode LIKE CONCAT('%', #{syscode}, '%')
+			</if>
+		</where>
+	</sql>
+
+	<select id="query" resultType="map">
+		SELECT
+			`id`,
+			`syscode`,
+			`type`,
+			`state`,
+			`errordesc`,
+			`usreprotocol`,
+			`component_type`,
+			`remark`,
+			`updatetime`
+		FROM
+			t_sms_system_error_desc
+		<include refid="queryCommon"/>
+		ORDER BY updatetime DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_system_error_desc
+		<include refid="queryCommon"/>
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			`id`,
+			`syscode`,
+			`type`,
+			`state`,
+			`errordesc`,
+			`usreprotocol`,
+			`component_type`,
+			`remark`,
+			`updatetime`
+		FROM
+			t_sms_system_error_desc
+		WHERE
+			id = #{id}
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO `t_sms_system_error_desc` (
+			`id`,
+			`syscode`,
+			`type`,
+			`state`,
+			`errordesc`,
+			`usreprotocol`,
+			`component_type`,
+			`remark`,
+			`updatetime`
+		)
+		VALUES
+			(
+				NULL,
+				#{syscode},
+				#{type},
+				#{state},
+				#{errordesc},
+				#{usreprotocol},
+				#{component_type},
+				#{remark},
+				NOW()
+			)
+	</insert>
+	
+	<select id="checkSave" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_system_error_desc
+		WHERE
+			syscode = #{syscode}
+		<if test="id != null and id != ''">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<update id="update">
+		UPDATE `t_sms_system_error_desc`
+		SET 
+		 `syscode` = #{syscode},
+		 `type` = #{type},
+		 `state` = #{state},
+		 `errordesc` = #{errordesc},
+		 `usreprotocol` = #{usreprotocol},
+		 `component_type` = #{component_type},
+		 `remark` = #{remark},
+		 `updatetime` = NOW()
+		WHERE
+			id = #{id}
+	</update>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_system_error_desc` WHERE id = #{id}
+	</delete>
+	
+</mapper> 

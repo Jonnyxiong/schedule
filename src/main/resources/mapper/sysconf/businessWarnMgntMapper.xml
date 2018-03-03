@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统设置-业务预警阈值管理-->
+<mapper namespace="businessWarnMgnt">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="warn_type != null and warn_type != ''">
+				warn_type = #{warn_type}
+			</if>
+			<if test="clientid != null and clientid !=''">
+				AND
+				clientid LIKE CONCAT('%', #{clientid}, '%')
+			</if>
+		</where>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			id,
+			clientid,
+			warn_type,
+			time_number,
+			time_data,
+			all_time_number,
+			DATE_FORMAT(
+				updatetime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS updatetime
+		FROM
+			t_sms_business_warn
+		<include refid="queryCommon" />
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(1) AS totalCount
+		FROM
+			t_sms_business_warn
+		<include refid="queryCommon" />
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			id,
+			clientid,
+			warn_type,
+			time_number,
+			time_data,
+			all_time_number
+		FROM
+			t_sms_business_warn
+		WHERE
+			id = #{id}
+	</select>
+	
+	<select id="saveCheck" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_business_warn
+		WHERE
+			warn_type = #{warn_type}
+		AND clientid = #{clientid}
+		<if test="id != null and id !=''">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO `t_sms_business_warn` (
+			`clientid`,
+			`warn_type`,
+			`time_number`,
+			`time_data`,
+			`all_time_number`,
+			`updatetime`
+		)
+		VALUES
+			(
+				#{clientid},
+				#{warn_type},
+				#{time_number},
+				#{time_data},
+				#{all_time_number},
+				NOW()
+			)
+	</insert>
+	
+	<update id="update">
+		UPDATE `t_sms_business_warn`
+		SET
+		 `clientid` = #{clientid},
+		 `warn_type` = #{warn_type},
+		 `time_number` = #{time_number},
+		 `time_data` = #{time_data},
+		 `all_time_number` = #{all_time_number},
+		 `updatetime` = NOW()
+		WHERE
+			id = #{id}
+	</update>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_business_warn` WHERE id = #{id}
+	</delete>
+	
+</mapper> 

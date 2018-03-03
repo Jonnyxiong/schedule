@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 组件管理-SMSP组件配置-->
+<mapper namespace="smspComponent">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="component_type != null and component_type != -1">
+				component_type = #{component_type}
+			</if>
+			<if test="component_name">
+				AND
+				component_name LIKE CONCAT('%', #{component_name}, '%')
+			</if>
+		</where>
+	</sql>
+
+	<select id="query" resultType="map">
+		SELECT
+			`id`,
+			`component_id`,
+			`component_type`,
+			`component_name`,
+			`host_ip`,
+			`node_id`,
+			`redis_thread_num`,
+			`sgip_report_switch`,
+			`mq_id`,
+			`component_switch`,
+			`black_list_switch`,
+			date_format(
+				update_date,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_date
+		FROM
+			t_sms_component_configure
+		<include refid="queryCommon"/>
+		ORDER BY component_type ASC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_component_configure
+		<include refid="queryCommon"/>
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			`id`,
+			`component_id`,
+			`component_type`,
+			`component_name`,
+			`host_ip`,
+			`node_id`,
+			`redis_thread_num`,
+			`sgip_report_switch`,
+			`mq_id`,
+			`component_switch`,
+			`black_list_switch`,
+			`update_date`
+		FROM
+			t_sms_component_configure
+		WHERE
+			id = #{id}
+	</select>
+	
+	<select id="checkSave" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_component_configure
+		WHERE
+			host_ip = #{host_ip}
+		AND component_type = #{component_type}
+		<if test="id != null and id != ''">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<select id="checkCompnentIdExist" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_component_configure
+		WHERE
+			component_id = #{component_id}
+		<if test="id != null and id != ''">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO `t_sms_component_configure` (
+			`component_id`,
+			`component_type`,
+			`component_name`,
+			`host_ip`,
+			`node_id`,
+			`redis_thread_num`,
+			`sgip_report_switch`,
+			`mq_id`,
+			`component_switch`,
+			`black_list_switch`,
+			`update_date`
+		)
+		VALUES
+			(
+				#{component_id},
+				#{component_type},
+				#{component_name},
+				#{host_ip},
+				#{node_id},
+				#{redis_thread_num},
+				#{sgip_report_switch},
+				#{mq_id},
+				#{component_switch},
+				#{black_list_switch},
+				NOW()
+			)
+	</insert>
+	
+	<update id="update">
+		UPDATE `t_sms_component_configure`
+		SET 
+		 `component_id` = #{component_id},
+		 `component_type` = #{component_type},
+		 `component_name` = #{component_name},
+		 `host_ip` = #{host_ip},
+		 `node_id` = #{node_id},
+		 `redis_thread_num` = #{redis_thread_num},
+		 `sgip_report_switch` = #{sgip_report_switch},
+		 `component_switch` = #{component_switch},
+		 `black_list_switch` = #{black_list_switch},
+		 `mq_id` = #{mq_id},
+		 `update_date` = NOW()
+		WHERE
+			id = #{id};
+	</update>
+	
+	<select id="deleteCheck" resultType="int">
+		SELECT COUNT(1) FROM t_sms_component_ref_mq WHERE component_id = #{component_id};
+	</select>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_component_configure` WHERE component_id = #{component_id}
+	</delete>
+	
+	
+	<select id="queryComponentIdById" resultType="string">
+		SELECT component_id AS componentId FROM t_sms_component_configure WHERE id = #{id}
+	</select>
+	
+	<update id="updateComponentConfTableMiddlewareId">
+		UPDATE t_sms_component_ref_mq
+		SET component_id = #{component_id}
+		WHERE
+			component_id = #{old_component_id}
+	</update>
+	
+	<select id="getOneComponetInfo" resultType="map">
+		SELECT
+			middleware_id AS middlewareId,
+			host_ip AS ip,
+			console_port AS port, 
+			user_name AS username,
+			pass_word AS password
+		FROM t_sms_middleware_configure
+		WHERE middleware_id = #{middlewareId}
+	</select>
+	
+</mapper> 

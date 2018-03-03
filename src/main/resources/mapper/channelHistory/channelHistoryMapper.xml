@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 短信通道质量历史监控 -->
+<mapper namespace="channelHistory">
+	
+	<!-- 查询通道回执率、应答率堆积图数据 -->
+	<select id="getChannelReportRespStackData" resultType="map">
+		SELECT
+			t2.channel_id,
+			t2.channel_name,
+			ROUND((t2.report1 / t2.send_total_num) * 100,2) AS report1,
+			ROUND((t2.report2 / t2.send_total_num) * 100,2) AS report2,
+			ROUND((t2.report3 / t2.send_total_num) * 100,2) AS report3,
+			ROUND((t2.report4 / t2.send_total_num) * 100,2) AS report4,
+			ROUND((t2.report5 / t2.send_total_num) * 100,2) AS report5,
+			ROUND((t2.report6 / t2.send_total_num) * 100,2) AS report6,
+			ROUND((t2.resp1 / t2.send_total_num) * 100,2) AS resp1,
+			ROUND((t2.resp2 / t2.send_total_num) * 100,2) AS resp2,
+			ROUND((t2.resp3 / t2.send_total_num) * 100,2) AS resp3,
+			ROUND((t2.resp4 / t2.send_total_num) * 100,2) AS resp4,
+			ROUND((t2.resp5 / t2.send_total_num) * 100,2) AS resp5,
+			ROUND((t2.resp6 / t2.send_total_num) * 100,2) AS resp6,
+			ROUND((t2.send_sccuss_num / t2.send_total_num) * 100,2) AS sccuss_rate,
+			t2.send_total_num AS send_total_num,
+			DATE_FORMAT(t2.data_time, '%Y%m/%d') AS data_time
+		FROM (
+			SELECT
+				t.channel_id AS channel_id,
+				t.channel_name AS channel_name,
+				t.send_total_num AS send_total_num,
+				t.send_sccuss_num AS send_sccuss_num,
+				t.report_num_1 AS report1,<!-- [0-5] -->
+				t.report_num_2 AS report2,<!-- (5-10] -->
+				t.report_num_3 + t.report_num_4 AS report3,<!-- (10-30] -->
+				t.report_num_5 AS report4,<!-- (30-60] -->
+				t.report_num_6 + t.report_num_7 + t.report_num_8 AS report5,<!-- 回执 大于60秒  -->
+				t.report_num_9 AS report6,<!-- 回执未返回 -->
+				
+				t.resp_num_1 AS resp1,<!-- 应答 [0s-1s]-->
+				t.resp_num_2 AS resp2,<!-- 应答 (1s-5s] -->
+				t.resp_num_3 AS resp3,<!-- 应答 (5s-30s] -->
+				t.resp_num_4 AS resp4,<!-- 应答 (30s-60s] -->
+				t.resp_num_5 + t.resp_num_6 AS resp5,<!-- 应答 大于60秒 -->
+				t.resp_num_7 AS resp6,<!-- 应答超时 -->
+				t.data_time
+			FROM t_sms_channel_indexes_stat_history t
+			WHERE 
+				t.data_time BETWEEN #{startTime} AND #{endTime}
+			AND channel_id = #{channelId}
+		) t2
+	</select>
+	
+	<!-- 查询Excel导出数据 -->
+	<select id="getExportExcelData" resultType="map">
+		SELECT
+			t2.channel_id,
+			t2.channel_name,
+			CONCAT(t2.report1,'（', CONCAT(ROUND((t2.report1 / t2.send_total_num) * 100,2),'%'),'）') AS report1,
+			CONCAT(t2.report2,'（', CONCAT(ROUND((t2.report2 / t2.send_total_num) * 100,2),'%'),'）') AS report2,
+			CONCAT(t2.report3,'（', CONCAT(ROUND((t2.report3 / t2.send_total_num) * 100,2),'%'),'）') AS report3,
+			CONCAT(t2.report4,'（', CONCAT(ROUND((t2.report4 / t2.send_total_num) * 100,2),'%'),'）') AS report4,
+			CONCAT(t2.report5,'（', CONCAT(ROUND((t2.report5 / t2.send_total_num) * 100,2),'%'),'）') AS report5,
+			CONCAT(t2.report6,'（', CONCAT(ROUND((t2.report6 / t2.send_total_num) * 100,2),'%'),'）') AS report6,
+			CONCAT(t2.resp1,'（', CONCAT(ROUND((t2.resp1 / t2.send_total_num) * 100,2),'%'),'）') AS resp1,
+			CONCAT(t2.resp2,'（', CONCAT(ROUND((t2.resp2 / t2.send_total_num) * 100,2),'%'),'）') AS resp2,
+			CONCAT(t2.resp3,'（', CONCAT(ROUND((t2.resp3 / t2.send_total_num) * 100,2),'%'),'）') AS resp3,
+			CONCAT(t2.resp4,'（', CONCAT(ROUND((t2.resp4 / t2.send_total_num) * 100,2),'%'),'）') AS resp4,
+			CONCAT(t2.resp5,'（', CONCAT(ROUND((t2.resp5 / t2.send_total_num) * 100,2),'%'),'）') AS resp5,
+			CONCAT(t2.resp6,'（', CONCAT(ROUND((t2.resp6 / t2.send_total_num) * 100,2),'%'),'）') AS resp6,
+			CONCAT(ROUND((t2.send_sccuss_num / t2.send_total_num) * 100,2),'%') AS sccuss_rate,
+			t2.send_total_num AS send_total_num,
+			DATE_FORMAT(t2.data_time, '%Y-%m-%d') AS data_time
+		FROM (
+			SELECT
+				t.channel_id AS channel_id,
+				t.channel_name AS channel_name,
+				t.send_total_num AS send_total_num,
+				t.send_sccuss_num AS send_sccuss_num,
+				t.report_num_1 AS report1,<!-- 回执 0至5秒 -->
+				t.report_num_2 AS report2,<!-- 回执 6至10秒 -->
+				t.report_num_3 + t.report_num_4 AS report3,<!-- 回执 11至30秒 -->
+				t.report_num_5 AS report4,<!-- 回执 31至60秒 -->
+				t.report_num_6 + t.report_num_7 + t.report_num_8 AS report5,<!-- 回执 大于60秒   -->
+				t.report_num_9 AS report6,<!-- 回执未返回 -->
+				
+
+				t.resp_num_1 AS resp1,<!-- 应答 [0s-1s]-->
+				t.resp_num_2 AS resp2,<!-- 应答 (1s-5s] -->
+				t.resp_num_3 AS resp3,<!-- 应答 (5s-30s] -->
+				t.resp_num_4 AS resp4,<!-- 应答 (30s-60s] -->
+				t.resp_num_5 + t.resp_num_6 AS resp5,<!-- 应答 大于60秒 -->
+				t.resp_num_7 AS resp6,<!-- 应答超时 -->
+				t.data_time
+			FROM t_sms_channel_indexes_stat_history t
+			WHERE 
+				t.data_time BETWEEN #{startTime} AND #{endTime}
+			AND channel_id = #{channelId}
+		) t2
+	</select>
+	
+	
+	<!-- 用户历史质量 begin -->
+	<!-- 查询用户回执率、应答率堆积图数据 -->
+	<select id="getClientReportRespStackData" resultType="map">
+		SELECT
+			ROUND((t2.report1 / t2.send_total_num) * 100,2) AS report1,
+			ROUND((t2.report2 / t2.send_total_num) * 100,2) AS report2,
+			ROUND((t2.report3 / t2.send_total_num) * 100,2) AS report3,
+			ROUND((t2.report4 / t2.send_total_num) * 100,2) AS report4,
+			ROUND((t2.report5 / t2.send_total_num) * 100,2) AS report5,
+			ROUND((t2.report6 / t2.send_total_num) * 100,2) AS report6,
+			<!--ROUND((t2.report7 / t2.send_total_num) * 100,2) AS report7,-->
+			ROUND((t2.delay1 / t2.send_total_num) * 100,2) AS delay1,
+			ROUND((t2.delay2 / t2.send_total_num) * 100,2) AS delay2,
+			ROUND((t2.delay3 / t2.send_total_num) * 100,2) AS delay3,
+			ROUND((t2.delay4 / t2.send_total_num) * 100,2) AS delay4,
+			ROUND((t2.delay5 / t2.send_total_num) * 100,2) AS delay5,
+			t2.send_total_num AS send_total_num,
+			DATE_FORMAT(t2.data_time, '%m/%d %H:%i') AS data_time
+		FROM (
+			SELECT
+				t.client_id AS client_id,
+				t.client_name AS client_name,
+				t.send_total_num AS send_total_num,
+				t.report_num_1 AS report1,<!-- 回执 0至5秒 -->
+				t.report_num_2 AS report2,<!-- 回执 6至10秒 -->
+				t.report_num_3 + t.report_num_4 AS report3,<!-- 回执 11至30秒 -->
+				t.report_num_5 AS report4,<!-- 回执 31至60秒 -->
+				t.report_num_6 + t.report_num_7 +t.report_num_8 AS report5,<!-- 回执 大于60秒 -->
+				<!--SUM(t.report_num_7) AS report5, 回执 121至300 -->
+				<!--SUM(t.report_num_8) AS report6, 回执 大于300秒 -->
+				t.report_num_9 AS report6,<!-- 回执未返回 -->
+				t.order_delay_num_1 AS delay1,<!-- 订单延迟0-1秒 -->
+				t.order_delay_num_2 AS delay2,<!-- 订单延迟1-3秒 -->
+				t.order_delay_num_3 AS delay3,<!-- 订单延迟3-5秒 -->
+				t.order_delay_num_4 AS delay4,<!-- 订单延迟大于5秒 -->
+				t.order_delay_num_5 AS delay5,<!-- 未发送 -->
+				t.data_time
+			FROM t_sms_client_indexes_stat_history t
+			WHERE 
+				t.data_time BETWEEN #{startTime} AND #{endTime}
+			AND client_id = #{clientId}
+		) t2
+	</select>
+	
+	
+	
+	<!-- 查询Excel导出数据 -->
+	<select id="getExportExcelData4Client" resultType="map">
+		SELECT
+			t2.client_id,
+			t2.client_name,
+			CONCAT(t2.report1,'（', CONCAT(ROUND((t2.report1 / t2.send_total_num) * 100,2),'%'),'）') AS report1,
+			CONCAT(t2.report2,'（', CONCAT(ROUND((t2.report2 / t2.send_total_num) * 100,2),'%'),'）') AS report2,
+			CONCAT(t2.report3,'（', CONCAT(ROUND((t2.report3 / t2.send_total_num) * 100,2),'%'),'）') AS report3,
+			CONCAT(t2.report4,'（', CONCAT(ROUND((t2.report4 / t2.send_total_num) * 100,2),'%'),'）') AS report4,
+			CONCAT(t2.report5,'（', CONCAT(ROUND((t2.report5 / t2.send_total_num) * 100,2),'%'),'）') AS report5,
+			CONCAT(t2.report6,'（', CONCAT(ROUND((t2.report6 / t2.send_total_num) * 100,2),'%'),'）') AS report6,
+			CONCAT(t2.delay1,'（', CONCAT(ROUND((t2.delay1 / t2.send_total_num) * 100,2),'%'),'）') AS delay1,
+			CONCAT(t2.delay2,'（', CONCAT(ROUND((t2.delay2 / t2.send_total_num) * 100,2),'%'),'）') AS delay2,
+			CONCAT(t2.delay3,'（', CONCAT(ROUND((t2.delay3 / t2.send_total_num) * 100,2),'%'),'）') AS delay3,
+			CONCAT(t2.delay4,'（', CONCAT(ROUND((t2.delay4 / t2.send_total_num) * 100,2),'%'),'）') AS delay4,
+			CONCAT(t2.delay5,'（', CONCAT(ROUND((t2.delay5 / t2.send_total_num) * 100,2),'%'),'）') AS delay5,
+			t2.send_total_num AS send_total_num,
+			DATE_FORMAT(t2.data_time, '%Y-%m-%d') AS data_time
+		FROM (
+			SELECT
+				t.client_id AS client_id,
+				t.client_name AS client_name,
+				t.send_total_num AS send_total_num,
+				t.report_num_1 AS report1,<!-- 回执 0至5秒 -->
+				t.report_num_2 AS report2,<!-- 回执 6至10秒 -->
+				t.report_num_3 + t.report_num_4 AS report3,<!-- 回执 11至30秒 -->
+				t.report_num_5 AS report4,<!-- 回执 31至60秒 -->
+				t.report_num_6 + t.report_num_7 +t.report_num_8 AS report5,<!-- 回执 大于60秒 -->
+				<!--SUM(t.report_num_7) AS report5, 回执 121至300 -->
+				<!--SUM(t.report_num_8) AS report6, 回执 大于300秒 -->
+				t.report_num_9 AS report6,<!-- 回执未返回 -->
+				t.order_delay_num_1 AS delay1,<!-- 订单延迟0-1秒 -->
+				t.order_delay_num_2 AS delay2,<!-- 订单延迟1-3秒 -->
+				t.order_delay_num_3 AS delay3,<!-- 订单延迟3-5秒 -->
+				t.order_delay_num_4 AS delay4,<!-- 订单延迟大于5秒 -->
+				t.order_delay_num_5 AS delay5,<!-- 未发送 -->
+				t.data_time
+			FROM t_sms_client_indexes_stat_history t
+			WHERE 
+				t.data_time BETWEEN #{startTime} AND #{endTime}
+			AND client_id = #{clientId}
+		) t2
+	</select>
+	
+	<!-- 用户历史质量 end -->
+	
+</mapper>

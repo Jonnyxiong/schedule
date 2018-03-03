@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="smsAccessMolog">
+	<select id="query" resultType="map">
+		SELECT
+			b.moid,
+			b.channelid,
+			b.receivedate,
+			b.phone,
+			b.tophone,
+			b.content,
+			b.sendmoid,
+			b.clientid,
+			b.userid
+		FROM
+			t_sms_access_molog b
+		<where>
+			<if test="phone != null">
+				b.phone LIKE concat('%',#{phone}, '%')
+			</if>
+			<if test="channelid !=null ">
+				AND b.channelid = #{channelid}
+			</if>
+ 			<if test="start_time !=null">
+				<![CDATA[AND b.receivedate > #{start_time}]]>
+			</if>
+			<if test="end_time !=null">
+				<![CDATA[AND b.receivedate < #{end_time}]]>
+			</if> 
+			<if test="tophone !=null ">
+				AND b.tophone = #{tophone}
+			</if>
+			<if test="content !=null ">
+				AND b.content LIKE concat('%',#{content}, '%')
+			</if>
+			<if test="sendmoid !=null ">
+				AND b.sendmoid = #{sendmoid}
+			</if>
+			<if test="clientid !=null ">
+				AND (b.clientid = #{clientid} OR b.userid = #{clientid})
+			</if>
+		</where>
+		ORDER BY
+			b.receivedate DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(1) AS totalCount
+		FROM
+			t_sms_access_molog b
+		<where>
+			<if test="phone != null">
+				b.phone LIKE concat('%',#{phone}, '%')
+			</if>
+			<if test="channelid !=null ">
+				AND b.channelid = #{channelid}
+			</if>
+			<if test="start_time !=null">
+				<![CDATA[AND b.receivedate > #{start_time}]]>
+			</if>
+			<if test="end_time !=null">
+				<![CDATA[AND b.receivedate < #{end_time}]]>
+			</if> 
+			<if test="tophone !=null ">
+				AND b.tophone = #{tophone}
+			</if>
+			<if test="content !=null ">
+				AND b.content LIKE concat('%',#{content}, '%')
+			</if>
+			<if test="sendmoid !=null ">
+				AND b.sendmoid = #{sendmoid}
+			</if>
+			<if test="clientid !=null ">
+				AND (b.clientid = #{clientid} OR b.userid = #{clientid})
+			</if>
+		</where>
+	</select>
+</mapper> 

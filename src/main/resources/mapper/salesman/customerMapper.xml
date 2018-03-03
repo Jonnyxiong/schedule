@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 客户管理 -->
+<mapper namespace="customer">
+	
+	<!-- 分页查询记录 -->
+	<select id="query" resultType="map">
+		SELECT
+			c.id AS id,
+			c.name AS customer_name,
+			s.name AS salesman_name
+		FROM
+			t_sms_customer c
+		INNER JOIN t_sms_salesman s ON c.salesmanid = s.id
+		<where>
+			<if test="name != null">
+					s.name LIKE concat('%', #{name}, '%')
+					OR c.name LIKE concat('%', #{name}, '%')
+			</if>
+		</where>
+		ORDER BY
+			c.createtime DESC
+		${limit}
+	</select>
+	
+	<!-- 客户记录总数 -->
+	<select id="queryCount" resultType="map">
+		SELECT 
+			COUNT(1) AS totalCount 
+		FROM 
+			t_sms_customer c
+		INNER JOIN t_sms_salesman s ON c.salesmanid = s.id
+		<where>
+			<if test="name != null">
+					s.name LIKE concat('%', #{name}, '%')
+					OR c.name LIKE concat('%', #{name}, '%')
+			</if>
+		</where>
+	</select>
+	
+	<select id="checkCustomer" resultType="map">
+		SELECT * FROM t_sms_customer c WHERE c.name = TRIM( #{customer_name} ) AND c.available = 0
+	</select>
+	
+	<insert id="insertCustomer">
+		INSERT INTO 
+			t_sms_customer
+			SELECT #{id},
+				   #{customer_name},
+				   #{salesman_id},
+				   NOW()
+			FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM t_sms_customer s WHERE s.name like TRIM(#{customer_name}))
+	</insert>
+	
+	<update id="refreshCustomer">
+		UPDATE t_sms_customer c
+		SET  c.available = 1,
+			 c.salesmanid = #{salesman_id},
+			 c.createtime = NOW()
+		WHERE
+			c.name = TRIM(#{customer_name})
+	</update>
+	
+	<!-- 删除客户 -->
+	<delete id="deleteCustomer">
+		DELETE FROM t_sms_customer WHERE id = #{id}
+	</delete>
+	
+	
+	
+</mapper> 

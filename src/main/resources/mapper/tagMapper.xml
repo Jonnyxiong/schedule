@@ -1,0 +1,1282 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 自定义标签业务 -->
+<mapper namespace="tag">
+
+	<!-- 查询数据字典表 -->
+	<select id="queryDictionary" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				<if test="showAll">
+					SELECT
+						'' AS `value`,
+						'${placeholder}：所有' AS text,
+						- 1 AS sort
+					UNION ALL
+				</if>
+					SELECT
+						p.param_key AS `value`,
+						p.param_value AS text,
+						p.param_order AS sort
+					FROM
+						t_sms_dict p
+					WHERE
+						p.param_type = #{dictionaryType}
+			) t
+		WHERE
+			1 = 1
+		
+		<if test="includeValue != null">
+			AND t.`value` in 
+			<foreach collection="includeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			sort
+	</select>
+
+	<!-- 获取所有的角色（除了匿名用户） -->
+	<select id="role" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					- 1 AS sort
+				UNION ALL
+					SELECT
+						CONVERT (r.id, CHAR) AS `value`,
+						r.role_name AS text,
+						r.id AS sort
+					FROM
+						t_sms_role r
+					WHERE
+						r.`status` = 1
+						and
+						r.`web_id` = 1
+			) t
+		WHERE
+			1 = 1
+		
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			sort
+	</select>
+	
+
+	<!-- 获取定时任务 -->
+	<select id="task" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}：所有' AS text,
+					- 1 AS sort
+				UNION ALL
+					SELECT
+						CONVERT (t.task_id, CHAR) AS `value`,
+						CONVERT (
+							concat(
+								t.task_id,
+								'(',
+								t.task_name,
+								')'
+							),
+							CHAR
+						) AS text,
+						t.task_id AS sort
+					FROM
+						t_sms_task t
+			) t
+		WHERE
+			1 = 1
+		
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			sort
+	</select>
+	
+	<!-- 获取定时任务分组 -->
+	<select id="task_group" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}：所有' AS text,
+					- 1 AS sort
+				UNION ALL
+					SELECT DISTINCT
+						CONVERT (t1.`group`, CHAR) AS `value`,
+						CONVERT (t1.`group`, CHAR) AS text,
+						t1.`group` AS sort
+					FROM
+						t_sms_task t1
+			) t
+		ORDER BY
+			t.sort
+	</select>
+	
+	<!-- 获取管理员手机号 -->
+	<select id="adminMobile" resultType="map">
+		SELECT
+			u.id AS `value`,
+			concat(
+				u.realname,
+				'（',
+				u.mobile,
+				'）'
+			) AS text
+		FROM
+			t_sms_user u
+		WHERE
+			u.user_type = 1
+		AND u.`status` = 1
+		AND u.`web_id` = 1
+		ORDER BY
+			CONVERT (u.realname USING gbk)
+	</select>
+	
+	<!-- 所有通道 (标注：通道名称和是否开启)-->
+	<select id="channel" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}：所有' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT
+							CONVERT (cid, CHAR) AS `value`,
+							CONVERT (
+								concat(
+									cid,
+									'（',
+									channelname,
+									'）',
+									'（',
+									IF(state=1,'开启','关闭'),
+									'）'
+								),
+								CHAR
+							) AS text,
+							cid AS sort
+						FROM
+							t_sms_channel
+						WHERE
+							1 = 1
+						<if test="isWithSign != null and isWithSign == 1">
+							AND channeltype IN (1,2)
+						</if>
+						<!-- 用户自签通道用户端口 -->
+						<if test="isUserSignChannel != null and isUserSignChannel == 1">
+							AND channeltype = 3
+						</if>
+						<!-- 用户自签通道用户端口 -->
+						<if test="isUserSignChannel != null and isUserSignChannel == 1">
+							AND channeltype = 3
+						</if>
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort
+	</select>
+	
+	<!-- 所有开启的通道 -->
+	<select id="findAllChannel" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}：所有' AS text,
+					- 1 AS sort
+				UNION ALL
+					(
+						SELECT
+							CONVERT (cid, CHAR) AS `value`,
+							CONVERT (
+								concat(
+									cid,
+									'（',
+									channelname,
+									'）'
+								),
+								CHAR
+							) AS text,
+							cid AS sort
+						FROM
+							t_sms_channel
+						WHERE
+							state = 1
+						<if test="isWithSign != null and isWithSign == 1">
+							AND channeltype != 0
+						</if>
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		
+		ORDER BY
+			t.sort
+	</select>
+	
+	<!-- 所有开启的通道(无通道名称标注) -->
+	<select id="findRunningChannel" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}：所有' AS text,
+					- 1 AS sort
+				UNION ALL
+					(
+						SELECT
+							CONVERT (cid, CHAR) AS `value`,
+							CONVERT (cid, CHAR) AS text,
+							cid AS sort
+						FROM
+							t_sms_channel
+						WHERE
+							state = 1
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		
+		ORDER BY
+			t.sort
+	</select>
+	
+	<select id="channelGroup" resultType="map">
+		SELECT
+			t.`value`,
+			CONVERT (concat(
+					t.text,
+					'（',
+					t.statusText,
+					'）'
+			), CHAR) AS text
+		FROM
+			(
+				SELECT
+					1 AS status,
+					'' AS statusText ,
+					'' AS `value`,
+					'${placeholder}：所有' AS text,
+					9999 AS sort
+				UNION ALL
+					(
+						SELECT
+							status,
+							CASE status
+							WHEN 1 THEN '正常'
+							WHEN 2 THEN '关闭'
+							END AS statusText,
+							CONVERT (channelgroupid, CHAR) AS value,
+							CONVERT (concat(
+												channelgroupid,
+												'（',
+												channelgroupname,
+												'）'
+											), CHAR) AS text,
+							
+							channelgroupid AS sort
+						FROM
+							t_sms_channelgroup
+						WHERE
+							1 = 1
+						<!-- 全网 0、移动1、联通 2、 电信 3、 国际 4、 虚拟移动 5、 虚拟联通6、 虚拟电信 7 -->
+						<if test="operater != null">
+							AND operater = #{operater}
+						</if>
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.status,
+			t.sort
+	</select>
+
+	<select id="channelGroup4seg" resultType="map">
+		SELECT
+		t.`value`,
+		CASE t.`value`
+		WHEN '' THEN t.text
+		ELSE
+		CONVERT (concat(
+		t.text,
+		'（',
+		t.statusText,
+		'）',
+		'【',t.operaterName,
+		'】'
+		), CHAR)
+		END AS text
+		FROM
+		(
+		SELECT
+		1 AS status,
+		'' AS operaterName,
+		'' AS statusText ,
+		'' AS `value`,
+		'${placeholder}' AS text,
+		9999 AS sort
+		UNION ALL
+		(
+		SELECT
+		status,
+		CASE operater
+		WHEN 0 Then '全网'
+		WHEN 1 Then '移动'
+		WHEN 2 Then '联通'
+		WHEN 3 Then '电信'
+		WHEN 4 Then '国际'
+		ELSE
+		'未知类型'
+		END AS operaterName,
+		CASE status
+		WHEN 1 THEN '正常'
+		WHEN 2 THEN '关闭'
+		ELSE
+		'未知状态'
+		END AS statusText,
+		CONVERT (channelgroupid, CHAR) AS value,
+		CONVERT (concat(
+		channelgroupid,
+		'（',
+		channelgroupname,
+		'）'
+		), CHAR) AS text,
+
+		channelgroupid AS sort
+		FROM
+		t_sms_channelgroup
+		WHERE
+		1 = 1
+		<!-- 全网 0、移动1、联通 2、 电信 3、 国际 4、 虚拟移动 5、 虚拟联通6、 虚拟电信 7 -->
+		<if test="operater != null">
+			AND operater = #{operater}
+		</if>
+		)
+		) t
+		WHERE
+		1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+		t.status,
+		t.sort
+	</select>
+
+	<select id="channelGroup4whitekey" resultType="map">
+		SELECT
+		t.`value`,
+		CASE t.`value`
+		WHEN '' THEN t.text
+		ELSE
+		CONVERT (concat(
+		t.text,
+		'（',
+		t.statusText,
+		'）'
+		), CHAR)
+		End AS text
+		FROM
+		(
+		SELECT
+		1 AS status,
+		'' AS statusText ,
+		'' AS `value`,
+		'请选择通道组' AS text,
+		9999 AS sort
+		UNION ALL
+		(
+		SELECT
+		status,
+		CASE status
+		WHEN 1 THEN '正常'
+		WHEN 2 THEN '关闭'
+		END AS statusText,
+		CONVERT (channelgroupid, CHAR) AS value,
+		CONVERT (concat(
+		channelgroupid,
+		'（',
+		channelgroupname,
+		'）'
+		), CHAR) AS text,
+
+		channelgroupid AS sort
+		FROM
+		t_sms_channelgroup
+		WHERE
+		1 = 1
+		<!-- 全网 0、移动1、联通 2、 电信 3、 国际 4、 虚拟移动 5、 虚拟联通6、 虚拟电信 7 -->
+		<if test="operater != null">
+			AND operater = #{operater}
+		</if>
+		)
+		) t
+		WHERE
+		1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+		t.status,
+		t.sort
+	</select>
+
+
+
+
+	<!-- 查询通道策略池 -->
+	<select id="getPolicyId" resultType="map">
+		SELECT
+		t.`value`,
+		t. text
+		FROM
+		(
+		SELECT
+		'' AS `value`,
+		'${placeholder}' AS text,
+		0 AS sort
+		UNION ALL
+		(
+		SELECT
+		CONVERT (policy_id, CHAR) AS value,
+		CONVERT (concat(
+		policy_id,
+		'（',
+		policy_name,
+		'）'
+		), CHAR) AS text,
+
+		policy_id AS sort
+		FROM
+		t_sms_channel_pool_policy
+
+		)
+		) t
+		ORDER BY
+		t.sort
+	</select>
+
+	<!-- 树形下拉框：地区 -->
+	<select id="area" resultType="map">
+		SELECT
+			t.area_id AS id,
+			t.parent_id AS pId,
+			t.`name`
+		FROM
+			(
+				SELECT
+					a.area_id,
+					a.`name`,
+					a.parent_id,
+					a.sort
+				FROM
+					t_sms_area a
+				UNION ALL
+					SELECT
+						-1 AS area_id,
+						'其他' AS `name`,
+						0 AS parent_id,
+						35 AS sort
+				UNION ALL
+					SELECT
+						0 AS area_id,
+						'所有' AS `name`,
+						0 AS parent_id,
+						1 AS sort
+			) t
+		ORDER BY
+			t.parent_id,
+			t.sort
+	</select>
+	
+	<select id="getCityNameByAreaId" resultType="string">
+		select t.`name` from t_sms_area t where t.area_id = #{area_id} limit 1
+	</select>
+	
+	<!-- 所有销售人员 -->
+	<select id="findAllCustomer" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'' AS text,
+					- 1 AS sort
+				UNION ALL
+					(
+						SELECT
+							id AS `value`,
+							name AS text,
+							id AS sort
+						FROM
+							t_sms_customer
+					)
+			) t
+		ORDER BY
+			t.sort
+	</select>
+	
+	<!-- 所有短信审核人员 -->
+	<select id="findAllSmsAuditer" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'' AS text,
+					- 1 AS sort
+				UNION ALL
+					(
+						SELECT
+							u.id AS `value`,
+							u.realname AS text,
+							u.id AS sort
+						FROM
+							t_sms_user u INNER JOIN t_sms_user_role r ON u.id = r.user_id
+						WHERE r.role_id IN (1,7) AND u.status = 1
+					)
+				
+			) t
+		ORDER BY
+			t.sort
+	</select>
+	<!-- 所有短信审核原因 -->
+	<select id="findAllSmsConclusion" resultType="map">
+		SELECT
+		t.`value`,
+		t.text
+		FROM
+		(
+		SELECT
+		'' AS `value`,
+		'请选择' AS text,
+		- 1 AS sort
+		UNION ALL
+		(
+		SELECT
+		id AS `value`,
+		conclusion_desc AS text,
+		id AS sort
+		FROM
+		t_sms_audit_conclusion
+		)
+
+		) t
+		ORDER BY
+		t.sort
+	</select>
+	
+	
+	<!-- 获得所有短信账号 -->
+	<select id="findAllClientId" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}：所有' AS text,
+					999999999 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(clientid, CHAR) AS value,
+							CONVERT(CONCAT(clientid,'-', name, '-', IF(status = 1,'开启','关闭')),CHAR) AS text,
+							 access_speed AS sort
+						FROM t_sms_account
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort DESC
+	</select>
+	
+	<!-- 获得所有短信账号 -->
+	<select id="findRunningClientId" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}：所有' AS text,
+					999999999 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(clientid, CHAR) AS value,
+							CONVERT(CONCAT(clientid,'(',name,')'),CHAR) AS text,
+							access_speed AS sort
+						FROM t_sms_account
+						WHERE status = 1
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort DESC
+	</select>
+	
+	<!-- 查询t_sms_extendport_assign表所有的用户扩展端口类型 -->
+	<select id="getExtendType" resultType="map">
+		
+		SELECT
+			t.value,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					- 1 AS sort
+				UNION ALL
+					(
+						SELECT
+							extendtype AS value,
+							CONCAT(extendtype,' - ',extendname) AS text,
+							extendtype AS sort
+						FROM
+							t_sms_extendport_assign
+						WHERE
+						status = 0 OR status = 1
+					)
+				
+			) t
+		ORDER BY
+			t.sort
+	</select>
+	
+	<!-- 查询所有短信代理商(注册完成且完成认证) -->
+	<select id="getEnableSmsAgent" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(agent_id, CHAR) AS value,
+							CONVERT(CONCAT(agent_id,'-', agent_name),CHAR) AS text,
+							agent_id AS sort
+						FROM t_sms_agent_info
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort ASC
+	</select>
+	
+	<!-- 获得所有MQ中间件 -->
+	<select id="findAllMqMiddleware" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'MQ中间件：所有' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(middleware_id, CHAR) AS value,
+							CONVERT(CONCAT(middleware_id,'（', middleware_name,'）'),CHAR) AS text,
+							middleware_type AS sort
+						FROM t_sms_middleware_configure
+						WHERE middleware_type IN (1,2,3,4)
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort ASC
+	</select>
+	
+	<!-- 获得所有SMSP组件 -->
+	<select id="findAllSmspComponent" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'SMSP组件：所有' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(component_id, CHAR) AS value,
+							CONVERT(CONCAT(component_id,'（', component_name,'）'),CHAR) AS text,
+							component_type AS sort
+						FROM t_sms_component_configure
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort ASC
+	</select>
+	
+	<!-- 获得所有MqId -->
+	<select id="findAllMqId" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(mq.mq_id, CHAR) AS value,
+							CONVERT(CONCAT(mq.mq_id,'（', mq.queue_name,'）'),CHAR) AS text,
+							mq.mq_id AS sort
+						FROM t_sms_mq_configure mq
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort ASC
+	</select>
+	
+	
+	<!-- 查询所有的通道MqId -->
+	<select id="findSendIoMqId" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(mq.mq_id, CHAR) AS value,
+							CONVERT(CONCAT(mq.mq_id,'（', mq.queue_name,'）'),CHAR) AS text,
+							mq.mq_id AS sort
+						FROM t_sms_mq_configure mq LEFT JOIN t_sms_middleware_configure mid
+						ON mq.middleware_id = mid.middleware_id
+						WHERE mid.middleware_type = 2
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort ASC
+	</select>
+	
+	
+	<select id="findAllSmspCompenentId" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(component_id, CHAR) AS value,
+							CONVERT(CONCAT(component_id,'（', component_name,'）'),CHAR) AS text,
+							component_id AS sort
+						FROM t_sms_component_configure
+						WHERE component_type = '02'
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort ASC
+	</select>
+	
+	
+	<!-- 获得所有平台错误码 -->
+	<select id="findAllSysErrorCode" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(syscode, CHAR) AS value,
+							CONVERT(CONCAT(syscode,'（', errordesc, '）'),CHAR) AS text,
+							id AS sort
+						FROM t_sms_system_error_desc
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort ASC
+	</select>
+	
+	<select id="findAllSegCode" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(area_id, CHAR) AS value,
+							CONVERT(CONCAT(area_id,'（', name, '）'),CHAR) AS text,
+							sort AS sort
+						FROM t_sms_area
+						WHERE parent_id = 0
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort ASC
+	</select>
+	
+	<!-- 所有代理商销售人员 -->
+	<select id="findSalesman" resultType="map" parameterType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					- 1 AS sort
+				UNION ALL
+					(
+						SELECT
+							CONVERT(u.id, CHAR) AS value,
+							CONVERT(CONCAT(u.realname,'（', u.email, '）'),CHAR) AS text,
+							u.id AS sort
+						FROM t_sms_user u INNER JOIN (
+							SELECT role_id,user_id FROM t_sms_user_role WHERE role_id = (SELECT id FROM t_sms_role WHERE role_name = "销售人员")
+						) ur ON u.id = ur.user_id
+					)
+			) t
+		ORDER BY
+			t.sort
+	</select>
+	
+	<!-- 所有商务人员 -->
+	<select id="findBusiness" resultType="map" parameterType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					- 1 AS sort
+				UNION ALL
+					(
+						SELECT
+							CONVERT(u.id, CHAR) AS value,
+							CONVERT(CONCAT(u.realname,'（', u.email, '）'),CHAR) AS text,
+							u.id AS sort
+						FROM t_sms_user u INNER JOIN (
+							SELECT role_id,user_id FROM t_sms_user_role WHERE role_id = (SELECT id FROM t_sms_role WHERE role_name = "商务人员")
+						) ur ON u.id = ur.user_id
+						WHERE u.status = 1
+					)
+			) t
+		ORDER BY
+			t.sort
+	</select>
+	
+	<!-- 查询所有“自签平台用户端口”类型的通道 -->
+	<select id="findChannelByChannelTypeEq0" resultType="map" parameterType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					CONVERT (cid, CHAR) AS `value`,
+					CONVERT (
+						concat(
+							cid,
+							'（',
+							channelname,
+							'）',
+							'（',
+							IF(state=1,'开启','关闭'),
+							'）'
+						),
+						CHAR
+					) AS text,
+					cid AS sort
+				FROM
+					t_sms_channel
+				WHERE
+					channeltype = 0
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort
+	</select>
+
+
+	<!-- 查询所有“通道组 -->
+	<select id="findChannelgourpId" resultType="map" parameterType="map">
+		SELECT
+		t.`value`,
+		t.text
+		FROM
+		(
+		SELECT
+		CONVERT (cid, CHAR) AS `value`,
+		CONVERT (
+		concat(
+		cid,
+		'（',
+		channelname,
+		'）',
+		'（',
+		IF(state=1,'开启','关闭'),
+		'）'
+		),
+		CHAR
+		) AS text,
+		cid AS sort
+		FROM
+		t_sms_channel
+		WHERE
+		channeltype = 0
+		) t
+		WHERE
+		1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+		t.sort
+	</select>
+	
+	<select id="findClientCode" resultType="map" parameterType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'*' AS `value`,
+					'*' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT
+							CONVERT (client_code, CHAR) AS `value`,
+							CONVERT (client_code, CHAR) AS text,
+							id AS sort
+						FROM
+							t_sms_segment_client
+						GROUP BY client_code
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort
+	</select>
+
+
+	<select id="findClientCode4s" resultType="map" parameterType="map">
+		SELECT
+		t.`value`,
+		t.text
+		FROM
+		(
+		SELECT
+		'-2' AS `value`,
+		'所有' AS text,
+		-2 AS sort
+		UNION ALL
+		SELECT
+		'*' AS `value`,
+		'*' AS text,
+		-1 AS sort
+		UNION ALL
+		(
+		SELECT
+		CONVERT (client_code, CHAR) AS `value`,
+		CONVERT (client_code, CHAR) AS text,
+		id AS sort
+		FROM
+		t_sms_segment_client
+		GROUP BY client_code
+		)
+		) t
+		WHERE
+		1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+		t.sort
+	</select>
+
+
+
+	
+	<select id="queryTestTeamplate4Select" resultType="map">
+		SELECT
+			t.`value`,
+			t.text
+		FROM
+			(
+				SELECT
+					'' AS `value`,
+					'${placeholder}' AS text,
+					-1 AS sort
+				UNION ALL
+					(
+						SELECT 
+							CONVERT(template_id, CHAR) AS value,
+							CONVERT(CONCAT(template_id, " - ", template_name), CHAR) AS text,
+							template_id AS sort
+						FROM t_sms_test_template
+					)
+			) t
+		WHERE
+			1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in 
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+			t.sort ASC
+  	</select>
+
+	<select id="findClientId" resultType="map" parameterType="map">
+		SELECT
+		t.`value`,
+		t.text
+		FROM
+		(
+		SELECT
+		'*' AS `value`,
+		'*' AS text,
+		-1 AS sort
+		UNION ALL
+		(
+		SELECT
+		CONVERT (clientid, CHAR) AS `value`,
+		CONVERT (clientid, CHAR) AS text,
+		id AS sort
+		FROM
+		t_sms_account
+		GROUP BY clientid
+		)
+		) t
+		WHERE
+		1 = 1
+		<if test="excludeValue != null">
+			AND t.`value` not in
+			<foreach collection="excludeValue" item="i" open="(" close=")" separator=",">
+				#{i}
+			</foreach>
+		</if>
+		ORDER BY
+		t.sort
+	</select>
+
+
+
+</mapper> 

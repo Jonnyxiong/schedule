@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-超频白名单管理 -->
+<mapper namespace="overrateWhite">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="phone != null">
+				t.phone LIKE concat('%',#{phone}, '%')
+			</if>
+			<if test="clientid != null">
+				AND t.clientid LIKE concat('%',#{clientid}, '%')
+			</if>
+		</where>
+	</sql>
+	<select id="query" resultType="map">
+		SELECT 
+		  t.id,
+		  t.clientid,
+		  t.phone,
+		  t.status,
+		  t.remarks,
+		  t.createtime 
+		FROM
+  		t_sms_overrate_white_list t 
+		<include refid="queryCommon" />
+		ORDER BY t.createtime DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT 
+		count(1) as totalCount
+		from t_sms_overrate_white_list t 
+		<include refid="queryCommon" />
+	</select>
+	
+	<select id="view" resultType="map">
+		SELECT 
+		  id,
+		  clientid,
+		  phone,
+		  status,
+		  remarks,
+		  createtime 
+		FROM
+       t_sms_overrate_white_list t where t.id = #{id}
+
+	</select>
+	
+	<delete id="delete">
+		delete from t_sms_overrate_white_list where id = #{id}
+	</delete>
+	
+	<!-- 查重 -->
+	<select id="repeatCheck" resultType="map">
+		select clientid , phone from t_sms_overrate_white_list 
+		where clientid = #{clientid} AND  phone = #{phone}
+		<if test="id != null and id != ''">
+			and id != #{id}
+		</if>
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO t_sms_overrate_white_list (
+		  clientid,
+		  phone,
+		  status,
+		  remarks,
+		  createtime
+		) 
+		VALUES
+		  (
+		    #{clientid},
+		    #{phone},
+		    1,
+		    #{remarks},
+		    NOW()
+		  ) 
+	</insert>
+	
+	<update id="update">
+		UPDATE 
+		  t_sms_overrate_white_list 
+		SET
+		  clientid = #{clientid},
+		  phone = #{phone},
+		  remarks = #{remarks},
+		  createtime = NOW()
+		WHERE id = #{id} ;
+	</update>
+	
+	<select id="queryExportExcelData" resultType="map">
+		SELECT 
+		  t.clientid,
+		  t.phone,
+		  t.remarks
+		FROM
+  		t_sms_overrate_white_list t 
+		<include refid="queryCommon" />
+		ORDER BY t.createtime DESC
+	</select>
+</mapper> 

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 代理商平台 : 客户管理 -->
+<mapper namespace="clientIdSeq">
+	<!-- 随机获取一个未使用的clientId-->
+	<select id="getOneClientIdRandom" resultType="string">
+		SELECT
+			seq.clientid AS clientid
+		FROM
+			t_sms_clientid_sequence seq
+		WHERE
+			seq.`status` = 0
+		AND seq.`lock` = 0
+		AND seq.`clientid_type` = ${clientIdType}
+		ORDER BY RAND() LIMIT 1
+	</select>
+	
+	<!-- clientId 加锁-->
+	<update id="lockClientId">
+		UPDATE t_sms_clientid_sequence seq
+		SET 
+			seq.lock = 1,
+			seq.lock_start_time = NOW()
+		WHERE
+			seq.clientid = #{clientid}
+	</update>
+	
+	<!-- 获取当前client序列表中最大的clientId-->
+	<select id="getCruntentMaxClientIdSeq" resultType="string">
+		SELECT
+			MAX(clientid) AS clientid
+		FROM
+			t_sms_clientid_sequence
+		WHERE
+			`clientid_type` = ${clientIdType}
+	</select>
+	
+	<select id="getCruntentMaxClientId" resultType="string">
+		SELECT
+			MAX(clientid) AS clientid
+		FROM
+			t_sms_account
+		WHERE
+			clientid LIKE CONCAT(#{clientIdPrefix},"%")
+	</select>
+	
+	<select id=""></select>
+	
+	<!-- 添加数据到clientid序列 -->
+	<insert id="createClientIdBatch">
+		INSERT INTO
+			t_sms_clientid_sequence (clientid,status,clientid_type)
+		VALUES
+			<foreach collection="clientIdList" item="clientid" separator=",">
+			(#{clientid}, 0, #{clientIdType})
+			</foreach>
+	</insert>
+	
+	<!-- 修改clientid序列状态,已经使用的序列状态码更新为:1 -->
+	<update id="modifyClientIddStatus">
+		UPDATE
+			t_sms_clientid_sequence 
+		SET
+			status = 1
+		WHERE
+		 	clientid = #{clientid}
+	</update>
+	
+</mapper> 

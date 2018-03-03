@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-系统参数 -->
+<mapper namespace="whiteList">
+	<select id="query" resultType="map">
+		SELECT
+			l.id,
+			l.phone,
+			l.remarks AS remark,
+			date_format(
+				l.createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM
+			t_sms_white_list l
+		WHERE
+			1 = 1
+		
+		<if test="text != null">
+			AND l.phone LIKE concat('%',#{text}, '%')
+		</if>
+		ORDER BY
+			l.createtime DESC
+		${limit}
+	</select>
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_white_list l
+		WHERE
+			1 = 1
+		
+		<if test="text != null">
+			AND l.phone LIKE concat('%',#{text}, '%')
+		</if>
+	</select>
+
+
+	<delete id="deleteWhiteList">
+		delete from t_sms_white_list where id = #{id}
+	</delete>
+	
+	<insert id="insertWhiteList">
+		insert into t_sms_white_list(phone,createtime,remarks) select #{kw},now(),#{remark} FROM dual 
+		WHERE not exists (select 1 from t_sms_white_list t where t.phone = #{kw});
+	</insert>
+
+	<insert id="insertWhiteListBatch">
+		INSERT INTO t_sms_white_list
+			(phone, remarks, createtime)
+		VALUES
+		<foreach collection="list" item="item" separator="," >
+			(#{item.phone}, #{item.remarks}, now())
+		</foreach>
+
+	</insert>
+</mapper> 

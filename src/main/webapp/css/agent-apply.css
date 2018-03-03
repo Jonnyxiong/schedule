@@ -1,0 +1,12 @@
+/*!
+ * 代理商申请记录页面的模态框样式
+ */
+.idx-dialog-bg{display: none;position: fixed;top: 0;bottom: 0;left: 0;right: 0;background-color: rgba(0,0,0,0.5);z-index: 800;}
+.idx-dialog{display: none;position: fixed;top: 0;bottom: 0;left: 0;right: 0;z-index: 801;}
+.idx-dialog .idx-dialog-wp{position: absolute;top: 50%;left: 50%;width: 450px;margin:0 auto;background-color: #fff;transform: translate(-50%,-50%);-webkit-transform: translate(-50%,-50%);-moz-transform: translate(-50%,-50%);border-radius: 10px;-webkit-border-radius: 10px;-moz-border-radius: 10px;}
+.idx-dialog h4{position: relative;font-size: 26px;text-align: center;padding: 20px 0;}
+.idx-dialog .group{position: relative;padding-bottom: 10px;}
+.idx-dialog .group label{display: inline-block;width: 80px;text-align: right;margin-right: 20px;}
+.idx-dialog .group label b{color: #ff5b5b;}
+.idx-dialog #reason{width: 280px;margin-bottom: 20px}
+.idx-dialog .reason-error{position: absolute;left:178px;color: red;bottom: 10px;font-size: small;}

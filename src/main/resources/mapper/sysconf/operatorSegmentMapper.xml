@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-系统参数 -->
+<mapper namespace="operatorSegment">
+	<select id="query" resultType="map">
+		SELECT
+			operater,numbersegment,remarks,update_date 
+		FROM t_sms_operater_segment
+		<where>
+			<if test="operater != null">
+				operater = #{operater}
+			</if>
+		</where>
+		ORDER BY
+			update_date DESC
+		${limit}
+	</select>
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_operater_segment
+			<where>
+			<if test="operater != null">
+				operater = #{operater}
+			</if>
+		</where>
+	</select>
+
+	<select id="view" resultType="map">
+		SELECT
+			operater,numbersegment,remarks,update_date 
+		FROM t_sms_operater_segment
+		where operater = #{operater}
+	</select>
+	
+	<delete id="delete">
+		delete from t_sms_operater_segment where operater = #{operater}
+	</delete>
+	<!-- 查重 -->
+	<select id="segmentCheck" resultType="map">
+		SELECT operater,numbersegment FROM t_sms_operater_segment  WHERE operater = #{operater} LIMIT 1  FOR UPDATE
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO t_sms_operater_segment (
+			operater,numbersegment,remarks,update_date
+		)VALUES(
+			#{operater},
+			#{numbersegment},
+			#{remarks},
+			now()
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE t_sms_operater_segment
+		SET
+			operater=#{operater},
+			numbersegment = #{numbersegment},
+			remarks = #{remarks},
+			update_date = NOW()
+		WHERE operater = #{text}
+	</update>
+</mapper> 

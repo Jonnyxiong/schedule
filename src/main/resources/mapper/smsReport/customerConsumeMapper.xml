@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 客户消耗统计报表 -->
+<mapper namespace="customerConsume">
+
+	<!-- <sql id="query_common">
+		短信记录流水表（t_sms_access_yyyyMMdd）
+		<foreach collection="table_list" item="i" separator=" UNION ALL ">
+			SELECT
+				r.clientid AS clientid,
+				SUM(IF(r.state REGEXP '^0$|^1$|3|4|5|6|7|8|9|10', r.charge_num, 0)) AS sendTotal,
+				SUM(IF(r.state = 3, r.charge_num, 0)) AS reallySuccessTotal,
+				SUM(IF(r.state = 1, r.charge_num, 0)) AS fakeSuccessFail,
+				SUM(IF(r.state REGEXP '^1$|3|4|6', r.charge_num, 0)) AS charge1,
+				SUM(IF(r.state = 10 AND r.isoverratecharge = 1, r.charge_num, 0)) AS charge2,
+				SUM(IF(r.state = 6, r.charge_num, 0)) AS reallyFailTotal,
+				SUM(IF(r.state = 7, r.charge_num, 0)) AS auditFailTotal,
+				SUM(IF(r.state REGEXP '4|5', r.charge_num, 0)) AS submitFailTotal,
+				SUM(IF(r.state REGEXP '8|9|10', r.charge_num, 0)) AS interceptTotal
+			FROM ${i} r 
+			WHERE 1 =1 
+		    <if test="clientid != null">
+			    AND r.clientid LIKE CONCAT('%', #{clientid},'%')
+		    </if>
+		    <if test="start_time != null">
+				<![CDATA[ 
+					AND r.date >= #{start_time}
+				 ]]> 
+			</if>
+			<if test="end_time != null">
+				<![CDATA[ 
+					AND r.date <= #{end_time}
+				 ]]>
+			</if>
+			GROUP BY r.clientid
+		</foreach>
+	</sql> -->
+	
+	<sql id="query_common">
+		
+		SELECT 
+			ta.clientid as clientid,
+			ta.username as userName,
+			SUM(ta.sendTotal) as sendTotal,
+			SUM(ta.reallySuccessTotal) as reallySuccessTotal,
+			SUM(ta.fakeSuccessFail) as fakeSuccessFail,
+			SUM(ta.charge1) as charge1,
+			SUM(ta.charge2) as charge2,
+			SUM(ta.reallyFailTotal) as reallyFailTotal,
+			SUM(ta.auditFailTotal) as auditFailTotal,
+			SUM(ta.submitFailTotal) as submitFailTotal,
+			SUM(ta.interceptTotal) as interceptTotal,
+			SUM(ta.reallySuccessTotal)/SUM(ta.sendTotal) as successRate
+		FROM (
+			<foreach collection="table_list" item="i" separator=" UNION ALL ">
+				SELECT
+					r.clientid AS clientid,
+					r.username AS userName,
+					SUM(IF(r.state REGEXP '^0$|^1$|3|4|5|6|7|8|9|10', r.charge_num, 0)) AS sendTotal,
+					SUM(IF(r.state = 3, r.charge_num, 0)) AS reallySuccessTotal,
+					SUM(IF(r.state = 1, r.charge_num, 0)) AS fakeSuccessFail,
+					SUM(IF(r.state REGEXP '^1$|3|4|6', r.charge_num, 0)) AS charge1,
+					SUM(IF(r.state = 10 AND r.isoverratecharge = 1, r.charge_num, 0)) AS charge2,
+					SUM(IF(r.state = 6, r.charge_num, 0)) AS reallyFailTotal,
+					SUM(IF(r.state = 7, r.charge_num, 0)) AS auditFailTotal,
+					SUM(IF(r.state REGEXP '4|5', r.charge_num, 0)) AS submitFailTotal,
+					SUM(IF(r.state REGEXP '8|9|10', r.charge_num, 0)) AS interceptTotal
+				FROM ${i} r 
+				WHERE 1 =1 
+			    <if test="clientid != null">
+				    AND r.clientid LIKE CONCAT('%', #{clientid},'%')
+			    </if>
+			    <if test="start_time != null">
+					<![CDATA[ 
+						AND r.date >= #{start_time}
+					 ]]> 
+				</if>
+				<if test="end_time != null">
+					<![CDATA[ 
+						AND r.date <= #{end_time}
+					 ]]>
+				</if>
+				GROUP BY r.clientid
+			</foreach>
+		) ta
+		GROUP BY ta.clientid
+		ORDER BY ta.sendTotal DESC
+	</sql>
+	
+	
+	
+	
+	<select id="query" resultType="map">
+		SELECT
+			t.clientid,
+			t.userName,
+			t.sendTotal,
+			t.reallySuccessTotal,
+			t.fakeSuccessFail,
+			t.charge1 + t.charge2 AS chargeTotal,
+			t.reallyFailTotal,
+			t.auditFailTotal,
+			t.submitFailTotal,
+			t.interceptTotal,
+			CONCAT(ROUND(t.reallySuccessTotal/t.sendTotal * 100, 2),'%') as successRate
+		FROM
+		 (
+		 	<include refid="query_common" />
+		 ) t
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT 
+			COUNT(0) AS totalCount
+		FROM
+		(
+			<include refid="query_common" />	 
+		) t
+	</select>
+	
+	<select id="total"  resultType="map">
+		SELECT
+			SUM(t.sendTotal) AS sendTotal,
+			SUM(t.reallySuccessTotal) AS reallySuccessTotal,
+			SUM(t.fakeSuccessFail) AS fakeSuccessFail,
+			SUM(t.charge1) + SUM(t.charge2) AS chargeTotal,
+			SUM(t.reallyFailTotal) AS reallyFailTotal,
+			SUM(t.auditFailTotal) AS auditFailTotal,
+			SUM(t.submitFailTotal) AS submitFailTotal,
+			SUM(t.interceptTotal) AS interceptTotal,
+			CONCAT(ROUND(SUM(t.reallySuccessTotal)/SUM(t.sendTotal) * 100, 2),'%') as successRate
+		FROM
+		(
+			<include refid="query_common" />
+		) t
+	</select>
+	
+</mapper> 

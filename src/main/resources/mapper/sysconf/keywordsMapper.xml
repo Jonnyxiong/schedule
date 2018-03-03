@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-系统参数 -->
+<mapper namespace="keywords">
+	<select id="query" resultType="map">
+		SELECT
+			id,
+			keyword,
+			remarks,
+			date_format(
+				createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM t_sms_keyword_list k
+		WHERE 1 = 1
+		<if test="text != null">
+			AND k.keyword LIKE concat('%',#{text}, '%')
+		</if>
+		ORDER BY
+			createtime DESC
+		${limit}
+	</select>
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_keyword_list k
+		WHERE 1 = 1
+		<if test="text != null">
+			AND k.keyword LIKE concat('%',#{text}, '%')
+		</if>
+	</select>
+	
+	<delete id="deleteKeyword">
+		delete from t_sms_keyword_list where id = #{id}
+	</delete>
+	
+	<insert id="insertKeyWord">
+		insert into t_sms_keyword_list(keyword,remarks,createtime) select #{keyword},#{remarks},now() FROM dual
+		WHERE not exists (select 1 from t_sms_keyword_list t where t.keyword = #{keyword});
+	</insert>
+	
+	<select id="queryExportExcelData" resultType="map">
+		SELECT
+			keyword,
+			remarks
+		FROM
+			t_sms_keyword_list
+		<where>
+			<if test="text != null">
+				AND keyword LIKE concat('%',#{text}, '%')
+			</if>
+		</where>
+	</select>
+</mapper> 

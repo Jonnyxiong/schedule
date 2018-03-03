@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 通道组管理-自签通道用户端口管理 -->
+<mapper namespace="channelExtendport">
+
+	<sql id="query_common">
+		WHERE 1=1
+		<if test="text != null">
+			AND (
+				channelid LIKE CONCAT('%',#{text},'%')
+				OR clientid LIKE CONCAT('%',#{text},'%')
+			)
+		</if>
+		<if test="extendport != null">
+			AND extendport = #{extendport}
+		</if>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			`id`,
+			`channelid`,
+			`clientid`,
+			`extendport`,
+			`remark`
+		FROM
+			t_sms_channel_extendport
+		<include refid="query_common"/>
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_channel_extendport
+		<include refid="query_common"/>
+	</select>
+
+	<select id="view" resultType="map">
+		SELECT
+			`id`,
+			`channelid`,
+			`clientid`,
+			`extendport`,
+			`remark`
+		FROM
+			t_sms_channel_extendport
+		WHERE id = #{id}
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO `t_sms_channel_extendport` (
+			`id`,
+			`channelid`,
+			`clientid`,
+			`extendport`,
+			`remark`
+		)
+		VALUES
+			(
+				NULL,
+				#{channelid},
+				#{clientid},
+				#{extendport},
+				#{remark}
+			);
+	</insert>
+	
+	<update id="update">
+		UPDATE t_sms_channel_extendport
+		SET channelid = #{channelid},
+			clientid = #{clientid},
+			extendport = #{extendport},
+			remark = #{remark}
+		WHERE id = #{id}
+	</update>
+	
+	<delete id="delete">
+		DELETE FROM t_sms_channel_extendport WHERE id = #{id}
+	</delete>
+	
+	<!-- 在同一channelid下，若存在clientid有值，extendport为空的记录，表示则通道已唯一分配给这个用户；此时，不能再针对此channelid进行端口分配 -->
+	<select id="channelExtendportCheck1" resultType="map">
+		
+		SELECT
+			id
+		FROM
+			t_sms_channel_extendport
+		WHERE 1=1
+			<if test="id != null">
+				AND id != #{id}
+			</if>
+			AND channelid = #{channelid} 
+			<![CDATA[ AND (LENGTH(trim(extendport))<1 OR ISNULL(extendport)) LIMIT 1 ]]>
+	</select>
+	
+	<!-- 在同一channelid下，clientid唯一 -->
+	<select id="saveCheck" resultType="map">
+		SELECT id FROM t_sms_channel_extendport WHERE clientid = #{clientid} AND channelid = #{channelid} LIMIT 1
+	</select>
+	
+	<select id="getAllExtendportByChannelId" resultType="string">
+		SELECT
+			extendport
+		FROM
+			t_sms_channel_extendport
+		WHERE
+			channelid = #{channelid} 
+		<if test="id != null">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<select id="channelExtendportCheck3" resultType="map">
+		SELECT 
+			id 
+		FROM 
+			t_sms_channel_extendport 
+		WHERE 1=1
+			<if test="id != null">
+				AND id != #{id}
+			</if>
+			AND channelid = #{channelid} 
+			AND extendport IS NOT NULL LIMIT 1
+	</select>
+	
+</mapper> 

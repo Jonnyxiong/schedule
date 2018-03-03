@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户配置-用户及通道组配置 -->
+<mapper namespace="user">
+
+	<sql id="queryCodition">
+		<where>
+			<if test="text != null and text != ''">
+				AND t.userid LIKE concat('%', #{text}, '%')
+			</if>
+			<if test="s_channelid != null and s_channelid != ''">
+				AND (
+					t.channelid LIKE concat('%', #{s_channelid}, '%')
+					OR t.ydchannelid LIKE concat('%', #{s_channelid}, '%')
+					OR t.ltchannelid LIKE concat('%', #{s_channelid}, '%')
+					OR t.dxchannelid LIKE concat('%', #{s_channelid}, '%')
+					OR t.gjchannelid LIKE concat('%', #{s_channelid}, '%')
+				)
+			</if>
+		</where>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			t.userid,
+			t.smstype,
+			CASE t.smstype
+				WHEN 0 THEN '通知'
+				WHEN 4 THEN '验证码'
+				WHEN 5 THEN '营销'
+				WHEN 6 THEN '告警短信'
+				WHEN 7 THEN 'USSD'
+				WHEN 8 THEN '闪信'
+			END AS smstype2,
+			t.channelid,
+			t.ydchannelid,
+			t.ltchannelid,
+			t.dxchannelid,
+			t.gjchannelid,
+			t.distoperators,
+			IF(t.distoperators=1, '是', '否') AS distoperators2,
+			t.upstream,
+			IF(t.upstream=0,'关闭','开启') AS upstream2,
+			t.report,
+			IF(t.report=0,'关闭','开启') AS report2,
+			t.remarks,
+			t.csign,
+			t.esign,
+			t.state,
+			t.unblacklist,
+			t.free_keyword,
+			t.free_channel_keyword,
+			IF(t.unblacklist=0, '否', '是') AS unblacklist2,
+			IF(t.free_keyword=0, '否', '是') AS free_keyword2,
+			IF(t.free_channel_keyword=0, '否', '是') AS free_channel_keyword2
+		FROM
+			t_user_gw t
+			
+		<include refid="queryCodition"/>
+		ORDER by t.updatedate DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT count(1) AS totalCount
+		FROM
+			t_user_gw t
+		<include refid="queryCodition"/>
+	</select>
+	
+	<!-- 查看 -->
+	<select id="view" resultType="map">
+		SELECT
+			t.id,
+			t.userid,
+			t.usertype,
+			t.smstype,
+			t.distoperators,
+			t.channelid,
+			t.ydchannelid,
+			t.ltchannelid,
+			t.dxchannelid,
+			t.gjchannelid,
+			t.remarks,
+			a.needextend,
+			a.signextend,
+			t.unblacklist,
+			t.free_keyword,
+			t.free_channel_keyword
+		FROM
+			t_user_gw t LEFT JOIN t_sms_account a ON t.userid = a.clientid
+		WHERE
+			t.userid = #{userid}
+		AND t.smstype = #{smstype}
+	</select>
+	
+	<select id="checkSidSave" resultType="map">
+		SELECT
+		id
+		FROM t_user_gw
+		WHERE userid = #{userid}
+		AND smstype = #{smstype}
+		<if test="id != null">
+			AND id != #{id}
+		</if>
+		limit 1
+	</select>
+	
+	<select id="checkClientIdSave" resultType="map">
+		SELECT
+		id
+		FROM t_user_gw
+		WHERE userid = #{userid}
+		AND smstype = #{smstype}
+		<if test="id != null">
+			AND id != #{id}
+		</if>
+		limit 1
+	</select>
+	
+	<insert id="insertUserGw">
+		insert into t_user_gw
+		(   
+			usertype,
+			userid,
+			smstype,
+			distoperators,
+			channelid, ydchannelid, ltchannelid, dxchannelid, gjchannelid, xnydchannelid, xnltchannelid, xndxchannelid,
+			upstream,
+			report,
+			csign,
+			esign,
+			state,
+			remarks,
+			updatedate,
+			unblacklist,
+			free_keyword,
+			free_channel_keyword
+		)
+		values
+		(	
+			"1",
+			#{userid},
+			#{smstype},
+			#{distoperators},
+			<if test="distoperators==0">
+				#{channelid}, "", "", "",
+			</if>
+			<if test="distoperators==1">
+				"",#{ydchannelid}, #{ltchannelid}, #{dxchannelid}, 
+			</if>
+			#{gjchannelid},"", "", "",
+			"0",<!-- #{upstream}, -->
+			"0",<!-- #{report}, -->
+			"",<!-- #{csign}, -->
+			"",<!-- #{esign}, -->
+			1,
+			#{remarks},
+			NOW(),
+			#{unblacklist},
+			#{free_keyword},
+			#{free_channel_keyword}
+		)
+	</insert>
+	
+	<update id="updateUserGw">
+		update 
+			t_user_gw t  
+		set
+			t.userid = #{userid},
+			t.smstype = #{smstype},
+			t.distoperators = #{distoperators},
+			<if test="distoperators==0">
+				t.channelid  = #{channelid},
+				t.ydchannelid = "",
+				t.ltchannelid = "",
+				t.dxchannelid = "",
+			</if>
+			<if test="distoperators==1">
+				t.channelid  = "",
+				t.ydchannelid = #{ydchannelid},
+				t.ltchannelid = #{ltchannelid},
+				t.dxchannelid = #{dxchannelid},
+			</if>
+			t.gjchannelid = #{gjchannelid},
+			t.remarks = #{remarks},
+			t.updatedate = NOW(),
+			t.unblacklist = #{unblacklist},
+			t.free_keyword = #{free_keyword},
+			t.free_channel_keyword= #{free_channel_keyword}
+		where t.id = #{id}
+	</update>
+	
+	<update id="updateStatus">
+		update 
+			t_user_gw t
+		set
+			t.state = #{state},
+			t.updatedate = NOW()
+		where t.userid= #{userid} AND t.smstype = #{smstype}
+	</update>
+	
+	<!-- 删除用户及通道组配置 -->
+	<delete id="delete">
+		DELETE FROM
+			t_user_gw
+		WHERE
+		    userid = #{userid} AND smstype = #{smstype}
+	</delete>
+	
+	<!-- 删除用户对应模板超频配置 -->
+	<delete id="deleteOverRateByUserAndSmsType">
+		DELETE FROM
+			t_template_overrate
+		WHERE
+			userid = #{userid} and smstype = #{smstype}
+	</delete>
+	
+	<delete id="deleteOverRateByUser">
+		DELETE FROM
+			t_template_overrate
+		WHERE
+			userid = #{userid}
+	</delete>
+	
+	<select id="queryUserGwCountByUser" resultType="int">
+		SELECT COUNT(1) FROM t_user_gw WHERE userid = #{userid}
+	</select>
+	
+	<!-- 根据sid返回已报备的签名列表 -->
+	<select id="getSignList" resultType="map">
+		SELECT
+			t.userid,
+			if(t.distoperators=0, convert(t.channelid,char), CONCAT('全网：',convert(t.channelid,char),'，移动：',convert(t.ydchannelid, char),'，联通：',convert(t.ltchannelid, char),'，电信：',convert(t.dxchannelid, char),'，国际：',convert(t.gjchannelid, char))) as channelid
+		FROM
+			t_user_gw t
+		WHERE
+			t.userid =#{sid}
+	</select>
+	
+	<!-- 插入模板超频配置 -->
+	<insert id="insertTemOverRate"  keyProperty="id">
+		INSERT INTO `t_template_overrate` (
+			userid,
+			smstype,
+			overRate_mode,
+			overRate_num_s,
+			overRate_time_s,
+			overRate_num_m,
+			overRate_time_m,
+			overRate_num_h,
+			overRate_time_h,
+			state,
+			overRate_updatetime
+		)
+		VALUES
+		(
+			#{userid},
+			#{smstype},
+			#{overRate_mode},
+			#{overRate_num_s},
+			#{overRate_time_s},
+			#{overRate_num_m},
+			#{overRate_time_m},
+			#{overRate_num_h},
+			#{overRate_time_h},
+			#{state},
+			now()
+		)
+	</insert>
+	
+	<!-- 根据clientId和smsType查询模板超频配置 -->
+	<select id="queryClientOverRateBySmsType" resultType="map">
+		SELECT
+			id,
+			overRate_mode,
+			overRate_num_s,
+			overRate_time_s,
+			overRate_num_m,
+			overRate_time_m,
+			overRate_num_h,
+			state,
+			overRate_time_h
+		FROM
+			t_template_overrate
+		WHERE
+			userid = #{userid} AND overrate_mode=0
+		AND (
+			smstype = #{smstype} OR smstype = -1
+		)
+		ORDER BY id;
+	</select>
+	
+	<!-- 删除模板超频配置 -->
+	<delete id="deleteOverRateById">
+		DELETE FROM t_template_overrate
+		WHERE id = #{id};
+	</delete>
+	
+	<select id="getExtendPort" resultType="map">
+		SELECT
+			endnumber,
+			currentnumber,
+			signportlen
+		FROM
+			t_sms_extendport_assign
+		WHERE extendtype = #{extendtype}
+	</select>
+	
+	<select id="queryIsClientExist" resultType="map">
+		SELECT
+			clientid
+		FROM
+			t_sms_account
+		WHERE
+			clientid = #{clientid};
+	</select>
+	
+	<!-- 根据端口类型将扩展端口加1 -->
+	<update id="updateEpCurrentNum">
+		UPDATE t_sms_extendport_assign
+		SET currentnumber = currentnumber + 1
+		WHERE
+			extendtype = #{extendtype}
+	</update>
+	
+	<!-- 更新扩展端口状态 -->
+	<update id="updateEpStatus">
+		UPDATE t_sms_extendport_assign
+		SET status = #{status}
+		WHERE
+			extendtype = #{extendtype}
+	</update>
+	
+	<!-- 查询sid已经配置的短信类型，用逗号分隔如“1,2,3” -->
+	<select id="getSmsTypeBySid" resultType="map">
+		SELECT GROUP_CONCAT(smstype) AS smstype FROM t_user_gw WHERE userid = #{userid} GROUP BY userid
+	</select>
+	
+	<!-- 查询子账号的短信协议类型和短信类型 -->
+	<select id="getSmsFromAndTypeByClientId" resultType="map">
+		SELECT t.smsfrom, t.smstype FROM t_sms_account t WHERE t.clientid = #{clientId};
+	</select>
+	
+	<!-- 根据运营商类型查询通道组 -->
+	<select id="queryChannelGroupByOperater" resultType="map">
+		SELECT
+			t.`value`,
+			t.`flag`,
+			CONVERT (concat(
+					t.text,
+					'（',
+					t.statusText,
+					'）'
+			), CHAR) AS label
+		FROM
+		(
+			SELECT
+					status,
+					CASE status
+					WHEN 1 THEN '正常'
+					WHEN 2 THEN '关闭'
+					END AS statusText,
+					CONVERT (channelgroupid, CHAR) AS value,
+					CONVERT (concat(
+										channelgroupid,
+										'（',
+										channelgroupname,
+										'）'
+									), CHAR) AS text,
+		flag AS flag,
+					channelgroupid AS sort
+				FROM
+					t_sms_channelgroup
+				<where>
+					<!-- 全网 0、移动1、联通 2、 电信 3、 国际 4 -->
+					<if test="operater != null">
+						operater = #{operater}
+					</if>
+				</where>
+		) t
+	</select>
+	
+	
+</mapper>

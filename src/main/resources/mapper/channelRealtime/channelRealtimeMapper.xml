@@ -1,0 +1,899 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 短信通道质量实时监控 -->
+<mapper namespace="channelRealtime">
+	
+	<!-- 获取图表数据 -->
+	<select id="getChartData" resultType="map">
+		SELECT
+			SUM(s.sendtotalcnt) AS sendtotalcnt,
+			SUM(s.timelytotalcnt) AS timelytotalcnt,
+			SUM(s.reachtotalcnt) AS reachtotalcnt,
+			ROUND(SUM(s.sendtotalcnt) / 300, 2) AS concurrency,
+			ROUND(IF(SUM(s.sendtotalcnt) = 0, 100, SUM(s.timelytotalcnt) * 100 / SUM(s.sendtotalcnt)), 2) AS timelyrate,
+			ROUND(IF(SUM(s.sendtotalcnt) = 0, 100, SUM(s.reachtotalcnt) * 100 / SUM(s.sendtotalcnt)), 2) AS reachrate,
+			UNIX_TIMESTAMP(s.datatime) * 1000 AS datatime
+		FROM
+			t_sms_channel_area_statistics_${date} s
+		WHERE
+			1 = 1
+		<if test="channel_id != null">
+			AND	s.channelid = #{channel_id}
+		</if>
+		<choose>
+			<when test="area_id == 0"><!-- 所有 -->
+				AND s.area_id = -1
+			</when>
+			<when test="area_id == -1"><!-- 其他 -->
+				AND s.area_id = 0
+			</when>
+			<when test="area_id_pid == 0"><!-- 省 -->
+				AND EXISTS (
+					SELECT
+						1
+					FROM
+						t_sms_area a
+					WHERE
+						a.parent_id = #{area_id}
+					AND a.area_id = s.area_id
+				)
+			</when>
+			<otherwise><!-- 市 -->
+				AND s.area_id = #{area_id}
+			</otherwise>
+		</choose>
+		AND s.datatime BETWEEN #{start_time}
+		AND #{end_time}
+		GROUP BY
+			s.datatime
+		ORDER BY
+			s.datatime
+	</select>
+	
+	<!-- 查询通道成功率预警值和及时率预警值 -->
+	<select id="getChannelDefaultRate" resultType="map">
+		SELECT
+			warn_succ_rate AS reachrate,
+			warn_time_rate AS timelyrate
+		FROM
+			t_sms_channel
+		WHERE cid = #{channel_id}
+	</select>
+	
+	<!-- v3.3以前的统计备份 -->
+	<select id="getChartData_bak" resultType="map">
+		SELECT
+			t.recvtotalcnt,
+			t.sendtotalcnt,
+			t.delaytotalcnt,
+			t.verifytotalcnt,
+			t.reachtotalcnt,
+			t.sendtotalcnt / 180 AS concurrency,
+			t.delay / t.delaytotalcnt AS delayavg,
+			t.sendtotalcnt * 100 / t.recvtotalcnt AS sendrate,
+			t.verifytotalcnt * 100 / t.sendtotalcnt AS verifyrate,
+			t.reachtotalcnt * 100 / t.sendtotalcnt AS reachrate,
+			t.datatime
+		FROM
+			(
+				SELECT
+					sum(s.recvtotalcnt) AS recvtotalcnt,
+					sum(s.sendtotalcnt) AS sendtotalcnt,
+					sum(s.delaytotalcnt) AS delaytotalcnt,
+					sum(s.verifytotalcnt) AS verifytotalcnt,
+					sum(s.reachtotalcnt) AS reachtotalcnt,
+					sum(s.delayavg * s.delaytotalcnt) AS delay,
+					UNIX_TIMESTAMP(s.datatime) * 1000 AS datatime
+				FROM
+					t_sms_record_area_statistics_${date} s
+				WHERE
+					1 = 1
+				
+				<if test="channel_id != null">
+					AND	s.channelid = #{channel_id}
+				</if>
+				<choose>
+					<when test="area_id == 0"><!-- 所有 -->
+					</when>
+					<when test="area_id == -1"><!-- 其他 -->
+						AND s.area_id = 0
+					</when>
+					<when test="area_id_pid == 0"><!-- 省 -->
+						AND EXISTS (
+							SELECT
+								1
+							FROM
+								t_sms_area a
+							WHERE
+								a.parent_id = #{area_id}
+							AND a.area_id = s.area_id
+						)
+					</when>
+					<otherwise><!-- 市 -->
+						AND s.area_id = #{area_id}
+					</otherwise>
+				</choose>
+				
+				AND s.datatime BETWEEN #{start_time}
+				AND #{end_time}
+				GROUP BY
+					s.datatime
+				ORDER BY
+					s.datatime
+			) t
+	</select>
+	
+	<!-- ucpaas_message_monitor数据库 根据clientId和时间获得实际发送速率 -->
+	<select id="getClientSendSpeedById" resultType="map">
+		SELECT
+			t.client_id,
+			t.client_name AS chart_name,
+			t.send_speed,
+<!-- 			DATE_FORMAT(t.data_time,'%m/%d %H:%i') AS data_time -->
+			UNIX_TIMESTAMP(t.data_time) * 1000 AS data_time
+		FROM
+		(
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT * FROM ${i} r
+			</foreach>
+		) t
+		WHERE 
+			t.data_time BETWEEN #{startTime} AND #{endTime}
+		AND
+			t.client_id = #{clientId}
+	</select>
+	
+	
+	<!-- ucpaas_message数据库 根据clientId获得承诺发送速率 -->
+	<select id="getClientPromiseSpeed" resultType="string">
+		SELECT
+			access_speed AS clientPromiseSpeed
+		FROM
+			t_sms_account
+		WHERE
+			clientid = #{clientId}
+	</select>
+	
+	<!-- ucpaas_message_monitor数据库 获得所有clientId实际发送速率 -->
+	<select id="getAllClientSendSpeed" resultType="map">
+		SELECT
+			"全部账号" AS chart_name,
+			SUM(t.send_speed) AS send_speed,
+<!-- 			DATE_FORMAT(t.data_time,'%m/%d %H:%i') AS data_time -->
+			UNIX_TIMESTAMP(t.data_time) * 1000 AS data_time
+		FROM
+		(
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT * FROM ${i} r
+			</foreach>
+		) t
+		WHERE 
+			t.data_time BETWEEN #{startTime} AND #{endTime}
+		GROUP BY t.data_time
+	</select>
+	
+	<!-- ucpaas_message数据库 获得所有clientId承诺发送速率 -->
+	<select id="getAllClientPromiseSpeed" resultType="string">
+		SELECT
+			SUM(IFNULL(access_speed,0)) AS allClientPromiseSpeed
+		FROM
+			t_sms_account
+	</select>
+	
+	<select id="getAccessQueueInfo" resultType="map">
+		SELECT 
+			CONVERT(queue_type, SIGNED) AS queue_type,
+			CASE queue_type
+				WHEN 1 THEN '移动行业'
+				WHEN 2 THEN '移动营销'
+				WHEN 3 THEN '联通行业'
+				WHEN 4 THEN '联通营销'
+				WHEN 5 THEN '电信行业'
+				WHEN 6 THEN '电信营销'
+			ELSE '其他' END AS queue_type_name,
+			SUM(message_number)  AS message_num,
+		  ROUND(SUM(message_number) / #{message_max_number}, 8) AS proportion
+		FROM t_sms_access_queue_stat_${date}
+		WHERE data_time = #{data_time}
+		GROUP BY queue_type
+	</select>
+	
+	<select id="getAccessQueueDataMaxTime" resultType="string">
+		SELECT
+			data_time
+		FROM
+			t_sms_access_queue_stat_${date}
+		ORDER BY
+			data_time DESC
+		LIMIT 1
+	</select>
+	
+	
+	<select id="getChannelPromiseSpeed" resultType="string">
+		SELECT
+			speed
+		FROM
+			t_sms_channel
+		WHERE
+			cid = #{channelId}
+	</select>
+	
+	
+	<!-- ucpaas_message_monitor数据库 根据通道号和时间获得实际发送速率 -->
+	<select id="getChannelSendSpeedById" resultType="map">
+		SELECT
+			t.channel_id,
+			t.channel_name AS chart_name,
+			ROUND(t.send_total_num / 300) AS send_speed,
+<!-- 			DATE_FORMAT(t.data_time, '%m/%d %H:%i') AS data_time -->
+			UNIX_TIMESTAMP(t.data_time) * 1000 AS data_time
+		FROM
+		(
+		    <!-- t_sms_channel_indexes_stat_yyyyMMdd表 -->
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT
+					channel_id,
+					channel_name,
+					send_total_num,
+					data_time
+				FROM ${i} r
+			</foreach>
+		) t
+		WHERE 
+			t.data_time BETWEEN #{startTime} AND #{endTime}
+		AND
+			t.channel_id = #{channelId}
+	</select>
+	
+	<select id="getChannelSuccRateById" resultType="map">
+		SELECT
+			SUM(IFNULL(send_sccuss_num, 0)) AS send_sccuss_num,
+			SUM(IFNULL(send_failure_num, 0)) AS send_failure_num,
+			SUM(IFNULL(send_unknown_num, 0)) AS send_unknown_num
+		FROM
+		(
+		    <!-- t_sms_channel_indexes_stat_yyyyMMdd表 -->
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT
+					channel_id,
+					send_sccuss_num,
+					send_failure_num,
+					send_unknown_num,
+					data_time
+				FROM ${i} r
+			</foreach>
+		) t
+		WHERE 
+			t.data_time BETWEEN #{startTime} AND #{endTime}
+		AND
+			t.channel_id = #{channelId}
+	</select>
+	
+	
+	<select id="getChannelRespRateById" resultType="map">
+		SELECT
+			SUM(IFNULL(resp_num_1, 0)) AS resp_num_1,
+			SUM(IFNULL(resp_num_2, 0)) AS resp_num_2,
+			SUM(IFNULL(resp_num_3, 0)) AS resp_num_3,
+			SUM(IFNULL(resp_num_4, 0)) AS resp_num_4,
+			SUM(IFNULL(resp_num_5, 0)) AS resp_num_5,
+			SUM(IFNULL(resp_num_6, 0)) AS resp_num_6,
+			SUM(IFNULL(resp_num_7, 0)) AS resp_num_7
+		FROM
+		(
+		    <!-- t_sms_channel_indexes_stat_yyyyMMdd表 -->
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT
+					channel_id,
+					resp_num_1,
+					resp_num_2,
+					resp_num_3,
+					resp_num_4,
+					resp_num_5,
+					resp_num_6,
+					resp_num_7,
+					data_time
+				FROM ${i} r
+			</foreach>
+		) t
+		WHERE 
+			t.data_time BETWEEN #{startTime} AND #{endTime}
+		AND
+			t.channel_id = #{channelId}
+	</select>
+	
+	<select id="getChannelReportRateById" resultType="map">
+		SELECT
+			SUM(IFNULL(report_num_1, 0)) + SUM(IFNULL(report_num_2, 0)) AS report_num_1,<!-- 0至10秒 -->
+			SUM(IFNULL(report_num_3, 0)) + SUM(IFNULL(report_num_4, 0)) AS report_num_2,<!-- 11至30秒 -->
+			SUM(IFNULL(report_num_5, 0)) AS report_num_3,<!-- 31至60秒 -->
+			SUM(IFNULL(report_num_6, 0)) AS report_num_4,<!-- 61至120秒 -->
+			SUM(IFNULL(report_num_7, 0)) AS report_num_5,<!-- 121至300秒 -->
+			SUM(IFNULL(report_num_8, 0)) AS report_num_6,<!-- 300秒以上 -->
+			SUM(IFNULL(report_num_9, 0)) AS report_num_7<!-- 回执未返回 -->
+		FROM
+		(
+		    <!-- t_sms_channel_indexes_stat_yyyyMMdd表 -->
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT
+					channel_id,
+					report_num_1,
+					report_num_2,
+					report_num_3,
+					report_num_4,
+					report_num_5,
+					report_num_6,
+					report_num_7,
+					report_num_8,
+					report_num_9,
+					data_time
+				FROM ${i} r
+			</foreach>
+		) t
+		WHERE 
+			t.data_time BETWEEN #{startTime} AND #{endTime}
+		AND
+			t.channel_id = #{channelId}
+	</select>
+	
+	<select id="getChannelListByTime" resultType="map">
+		SELECT
+			channel_id AS channelId,
+			channel_name AS channelName,
+			operator_type AS operatorType,
+			owner_type AS ownerType,
+			industry_type AS industryType
+		FROM
+		(
+		    <!-- t_sms_channel_status_graph_stat_yyyyMMdd表 -->
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT
+					channel_id,
+					channel_name,
+					operator_type,
+					owner_type,
+					industry_type,
+					data_time
+				FROM ${i} r
+			</foreach>
+		) t
+		WHERE 
+			t.data_time BETWEEN #{startTime} AND #{endTime}
+		GROUP BY channel_id
+	</select>
+	
+	<select id="getChannelStatusGraphData" resultType="map">
+		SELECT
+			t.status,
+			t.desp,
+<!-- 			DATE_FORMAT(t.dataTime,'%m/%d %H:%i') AS dataTime, -->
+			UNIX_TIMESTAMP(t.dataTime) * 1000 AS dataTime
+		FROM
+		(
+		    <!-- t_sms_channel_status_graph_stat_yyyyMMdd表 -->
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT
+					channel_id,
+					status AS status,
+					error_desp AS desp,
+					data_time AS dataTime
+				FROM ${i} r
+			</foreach>
+		) t
+		WHERE
+		<![CDATA[
+			t.dataTime > #{startTime} AND t.dataTime <= #{endTime}
+		]]>
+			
+		AND
+			t.channel_id = #{channelId}
+				
+	</select>
+	
+	
+	<select id="getChannelQualityMaxDateTime" resultType="string">
+		SELECT
+			DATE_FORMAT(data_time,'%Y-%m-%d %H:%i:%S') AS data_time
+		FROM
+			t_sms_channel_status_graph_stat_${date}
+		ORDER BY
+			data_time DESC
+		LIMIT 1
+	</select>
+	
+	<select id="getChannelIndexesMaxDateTime" resultType="string">
+		SELECT
+			DATE_FORMAT(data_time,'%Y-%m-%d %H:%i:%S') AS data_time
+		FROM
+			t_sms_channel_indexes_stat_${date}
+		ORDER BY
+			data_time DESC
+		LIMIT 1
+	</select>
+	
+	<select id="getChannelQualityTableData" resultType="map">
+		SELECT
+			DATE_FORMAT(
+				t2.start_time,
+				'%m-%d %H:%i'
+			) AS start_time,
+			DATE_FORMAT(
+				t2.end_time,
+				'%m-%d %H:%i'
+			) AS end_time,
+			t2.channel_id AS channel_id,
+			t2.channel_name AS channel_name,
+			t2.operator_type AS operator_type,
+			t2.industry_type AS industry_type,
+			t2.owner_type AS owner_type,
+			t2.send_total_num AS send_total_num,
+			CONCAT(t2.resp1,'（', CONCAT(ROUND((t2.resp1 / t2.send_total_num) * 100,2),'%'),'）') AS resp1,
+			CONCAT(t2.resp2,'（', CONCAT(ROUND((t2.resp2 / t2.send_total_num) * 100,2),'%'),'）') AS resp2,
+			CONCAT(t2.resp3,'（', CONCAT(ROUND((t2.resp3 / t2.send_total_num) * 100,2),'%'),'）') AS resp3,
+			CONCAT(t2.resp4,'（', CONCAT(ROUND((t2.resp4 / t2.send_total_num) * 100,2),'%'),'）') AS resp4,
+			CONCAT(t2.resp5,'（', CONCAT(ROUND((t2.resp5 / t2.send_total_num) * 100,2),'%'),'）') AS resp5,
+			CONCAT(t2.resp6,'（', CONCAT(ROUND((t2.resp6 / t2.send_total_num) * 100,2),'%'),'）') AS resp6,
+			CONCAT(t2.resp7,'（', CONCAT(ROUND((t2.resp7 / t2.send_total_num) * 100,2),'%'),'）') AS resp7,
+			CONCAT(t2.report1,'（', CONCAT(ROUND((t2.report1 / t2.send_total_num) * 100,2),'%'),'）') AS report1,
+			CONCAT(t2.report2,'（', CONCAT(ROUND((t2.report2 / t2.send_total_num) * 100,2),'%'),'）') AS report2,
+			CONCAT(t2.report3,'（', CONCAT(ROUND((t2.report3 / t2.send_total_num) * 100,2),'%'),'）') AS report3,
+			CONCAT(t2.report4,'（', CONCAT(ROUND((t2.report4 / t2.send_total_num) * 100,2),'%'),'）') AS report4,
+			CONCAT(t2.report5,'（', CONCAT(ROUND((t2.report5 / t2.send_total_num) * 100,2),'%'),'）') AS report5,
+			CONCAT(t2.report6,'（', CONCAT(ROUND((t2.report6 / t2.send_total_num) * 100,2),'%'),'）') AS report6,
+			CONCAT(t2.report7,'（', CONCAT(ROUND((t2.report7 / t2.send_total_num) * 100,2),'%'),'）') AS report7
+		FROM(
+			<include refid="getChannelQualityTableDataCommon"/>
+		) t2
+		ORDER BY send_total_num DESC
+		${limit}
+	</select>
+	
+	<select id="getChannelQualityTableDataCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM(
+			<include refid="getChannelQualityTableDataCommon"/>
+		) t2
+	</select>
+	
+	<sql id="getChannelQualityTableDataCommon">
+		SELECT
+			#{startTime} AS start_time,
+			#{endTime} AS end_time,
+			t.channel_id AS channel_id,
+			t.channel_name AS channel_name,
+			t.operator_type AS operator_type,
+			t.industry_type AS industry_type,
+			t.owner_type AS owner_type,
+			SUM(t.send_total_num) AS send_total_num,
+			SUM(t.resp_num_1) AS resp1,<!-- 0-2秒 -->
+			SUM(t.resp_num_2) AS resp2,<!-- 3-5秒 -->
+			SUM(t.resp_num_3) AS resp3,<!-- 6-10秒 -->
+			SUM(t.resp_num_4) AS resp4,<!-- 11-60秒 -->
+			SUM(t.resp_num_5) AS resp5,<!-- 61-300秒 -->
+			SUM(t.resp_num_6) AS resp6,<!-- 大于300秒 -->
+			SUM(t.resp_num_7) AS resp7,<!-- 应答超时 -->
+			SUM(t.report_num_1) + SUM(t.report_num_2) AS report1,<!-- 0至10秒 -->
+			SUM(t.report_num_3) + SUM(t.report_num_4) AS report2,<!-- 11至30秒 -->
+			SUM(t.report_num_5) AS report3,<!-- 31至60秒 -->
+			SUM(t.report_num_6) AS report4,<!-- 61至120秒 -->
+			SUM(t.report_num_7) AS report5,<!-- 121至300 -->
+			SUM(t.report_num_8) AS report6,<!-- 大于300秒 -->
+			SUM(t.report_num_9) AS report7,<!-- 回执未返回 -->
+			SUM(t.queue_num_1) AS queue1,
+			SUM(t.queue_num_2) AS queue2,
+			SUM(t.queue_num_3) AS queue3,
+			SUM(t.queue_num_4) AS queue4,
+			t.data_time
+		FROM
+		(
+		    <!-- t_sms_channel_indexes_stat_yyyyMMdd表 -->
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT
+					`channel_id`,
+					`channel_name`,
+					`operator_type`,
+					`industry_type`,
+					`owner_type`,
+					`send_total_num`,
+					`send_sccuss_num`,
+					`send_failure_num`,
+					`send_unknown_num`,
+					`submit_failure_num`,
+					`resp_num_1`,
+					`resp_num_2`,
+					`resp_num_3`,
+					`resp_num_4`,
+					`resp_num_5`,
+					`resp_num_6`,
+					`resp_num_7`,
+					`report_num_1`,
+					`report_num_2`,
+					`report_num_3`,
+					`report_num_4`,
+					`report_num_5`,
+					`report_num_6`,
+					`report_num_7`,
+					`report_num_8`,
+					`report_num_9`,
+					`queue_num_1`,
+					`queue_num_2`,
+					`queue_num_3`,
+					`queue_num_4`,
+					`data_time`
+				FROM ${i} r
+			</foreach>
+		) t
+		WHERE 
+<!-- 	t.data_time BETWEEN #{startTime} AND #{endTime} 
+                此处不能用 BETWEEN AND 因为统计数据一条记录表示一个5分钟范围内数据，如果查两条记录实际是10分钟范围内的数据-->
+		<![CDATA[  t.data_time > #{startTime} AND t.data_time <= #{endTime}  ]]>
+		<if test="channelList != null">
+			AND channel_id IN (
+				<foreach collection="channelList" item="i" separator=",">
+					${i}
+				</foreach>
+			)
+		</if>
+		GROUP BY t.channel_id
+	</sql>
+	
+	<select id="getChannelErrorDataById" resultType="map">
+		SELECT * FROM
+		(
+			SELECT
+				channel_id,
+				channel_name,
+				error_code,
+				SUM(error_num) AS error_num
+			FROM
+			(
+			    <!-- t_sms_channel_error_stat_yyyyMMdd表 -->
+				<foreach collection="tableList" item="i" separator=" UNION ALL ">
+					SELECT
+						channel_id,
+						channel_name,
+						error_code,
+						error_num,
+						data_time
+					FROM ${i} r
+				</foreach>
+			) t
+			WHERE
+				t.data_time BETWEEN #{startTime} AND #{endTime}
+			AND channel_id = #{channelId}
+			GROUP BY
+				error_code
+			
+		)t2
+		ORDER BY t2.error_num DESC
+		LIMIT 10
+		
+	</select>
+	
+	<select id="getClientQualityTableData" resultType="map">
+	
+		SELECT
+			DATE_FORMAT(
+				t2.start_time,
+				'%m-%d %H:%i'
+			) AS start_time,
+			DATE_FORMAT(
+				t2.end_time,
+				'%m-%d %H:%i'
+			) AS end_time,
+			t2.client_id AS client_id,
+			t2.client_name AS client_name,
+			t2.send_total_num AS send_total_num,
+			CONCAT(t2.orderDelay1,'（', CONCAT(ROUND((t2.orderDelay1 / t2.send_total_num) * 100,2),'%'),'）') AS orderDelay1,
+			CONCAT(t2.orderDelay2,'（', CONCAT(ROUND((t2.orderDelay2 / t2.send_total_num) * 100,2),'%'),'）') AS orderDelay2,
+			CONCAT(t2.orderDelay3,'（', CONCAT(ROUND((t2.orderDelay3 / t2.send_total_num) * 100,2),'%'),'）') AS orderDelay3,
+			CONCAT(t2.orderDelay4,'（', CONCAT(ROUND((t2.orderDelay4 / t2.send_total_num) * 100,2),'%'),'）') AS orderDelay4,
+			CONCAT(t2.orderDelay5,'（', CONCAT(ROUND((t2.orderDelay5 / t2.send_total_num) * 100,2),'%'),'）') AS orderDelay5,
+			CONCAT(t2.report1,'（', CONCAT(ROUND((t2.report1 / t2.send_total_num) * 100,2),'%'),'）') AS report1,
+			CONCAT(t2.report2,'（', CONCAT(ROUND((t2.report2 / t2.send_total_num) * 100,2),'%'),'）') AS report2,
+			CONCAT(t2.report3,'（', CONCAT(ROUND((t2.report3 / t2.send_total_num) * 100,2),'%'),'）') AS report3,
+			CONCAT(t2.report4,'（', CONCAT(ROUND((t2.report4 / t2.send_total_num) * 100,2),'%'),'）') AS report4,
+			CONCAT(t2.report5,'（', CONCAT(ROUND((t2.report5 / t2.send_total_num) * 100,2),'%'),'）') AS report5,
+			CONCAT(t2.report6,'（', CONCAT(ROUND((t2.report6 / t2.send_total_num) * 100,2),'%'),'）') AS report6,
+			CONCAT(t2.report7,'（', CONCAT(ROUND((t2.report7 / t2.send_total_num) * 100,2),'%'),'）') AS report7
+		FROM(
+			<include refid="getClientQualityTableDataCommon"/>
+		) t2
+		ORDER BY t2.send_total_num DESC
+		${limit}
+	
+	</select>
+	
+	<select id="getClientQualityTableDataCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM(
+			<include refid="getClientQualityTableDataCommon"/>
+		) t2
+	</select>
+	
+	<sql id="getClientQualityTableDataCommon">
+		SELECT
+			#{startTime} AS start_time,
+			#{endTime} AS end_time,
+			t.client_id AS client_id,
+			t.client_name AS client_name,
+			SUM(t.send_total_num) AS send_total_num,
+			SUM(t.order_delay_num_1) AS orderDelay1,
+			SUM(t.order_delay_num_2) AS orderDelay2,
+			SUM(t.order_delay_num_3) AS orderDelay3,
+			SUM(t.order_delay_num_4) AS orderDelay4,
+			SUM(t.order_delay_num_5) AS orderDelay5,
+			SUM(t.report_num_1) + SUM(t.report_num_2) AS report1,<!-- 0至10秒 -->
+			SUM(t.report_num_3) + SUM(t.report_num_4) AS report2,<!-- 11至30秒 -->
+			SUM(t.report_num_5) AS report3,<!-- 31至60秒 -->
+			SUM(t.report_num_6) AS report4,<!-- 61至120秒 -->
+			SUM(t.report_num_7) AS report5,<!-- 121至300 -->
+			SUM(t.report_num_8) AS report6,<!-- 大于300秒 -->
+			SUM(t.report_num_9) AS report7,<!-- 回执未返回 -->
+			t.data_time
+		FROM
+		(
+		    <!-- t_sms_client_indexes_stat_yyyyMMdd表 -->
+			<foreach collection="tableList" item="i" separator=" UNION ALL ">
+				SELECT
+					`client_id`,
+					`client_name`,
+					`send_total_num`,
+					`order_delay_num_1`,
+					`order_delay_num_2`,
+					`order_delay_num_3`,
+					`order_delay_num_4`,
+					`order_delay_num_5`,
+					`report_num_1`,
+					`report_num_2`,
+					`report_num_3`,
+					`report_num_4`,
+					`report_num_5`,
+					`report_num_6`,
+					`report_num_7`,
+					`report_num_8`,
+					`report_num_9`,
+					`data_time`
+				FROM ${i} r
+			</foreach>
+		) t
+		WHERE 
+<!-- 	t.data_time BETWEEN #{startTime} AND #{endTime} 
+                此处不能用 BETWEEN AND 因为统计数据一条记录表示一个5分钟范围内数据，如果查两条记录实际是10分钟范围内的数据-->
+		<![CDATA[  t.data_time > #{startTime} AND t.data_time <= #{endTime}  ]]>
+		<if test="clientIdList != null">
+			AND client_id IN (
+				<foreach collection="clientIdList" item="i" separator=",">
+					'${i}'
+				</foreach>
+			)
+		</if>
+		GROUP BY t.client_id
+	</sql>
+	
+	<!-- 查询通道回执率、应答率堆积图数据 -->
+	<select id="getChannelReportRespStackData" resultType="map">
+		SELECT
+			ROUND((t2.report1 / t2.send_total_num) * 100,2) AS report1,
+			ROUND((t2.report2 / t2.send_total_num) * 100,2) AS report2,
+			ROUND((t2.report3 / t2.send_total_num) * 100,2) AS report3,
+			ROUND((t2.report4 / t2.send_total_num) * 100,2) AS report4,
+			ROUND((t2.report5 / t2.send_total_num) * 100,2) AS report5,
+			ROUND((t2.report6 / t2.send_total_num) * 100,2) AS report6, 
+			ROUND((t2.resp1 / t2.send_total_num) * 100,2) AS resp1,
+			ROUND((t2.resp2 / t2.send_total_num) * 100,2) AS resp2,
+			ROUND((t2.resp3 / t2.send_total_num) * 100,2) AS resp3,
+			ROUND((t2.resp4 / t2.send_total_num) * 100,2) AS resp4,
+			ROUND((t2.resp5 / t2.send_total_num) * 100,2) AS resp5,
+			ROUND((t2.send_sccuss_num / t2.send_total_num) * 100,2) AS sccuss_rate,
+			t2.send_total_num AS send_total_num,
+			DATE_FORMAT(t2.data_time, '%m/%d %H:%i') AS data_time
+		FROM (
+			SELECT
+				t.channel_id AS channel_id,
+				t.channel_name AS channel_name,
+				SUM(t.send_total_num) AS send_total_num,
+				SUM(t.send_sccuss_num) AS send_sccuss_num,
+				SUM(t.report_num_1) AS report1,<!-- [0-5] -->
+				SUM(t.report_num_2) AS report2,<!-- (5-10] -->
+				SUM(t.report_num_3) + SUM(t.report_num_4) AS report3,<!-- (10-30] -->
+				SUM(t.report_num_5) AS report4,<!-- (30-60] -->
+				SUM(t.report_num_6) +SUM(t.report_num_7) + SUM(t.report_num_8) AS report5,<!-- 回执 大于60秒  -->
+				SUM(t.report_num_9) AS report6,<!-- 回执未返回 -->
+				<!--SUM(t.report_num_7) AS report5, 回执 121至300 -->
+				<!-- SUM(t.report_num_8) AS report6,回执 大于300秒 -->
+				<!--SUM(t.report_num_9) AS report7, 回执未返回 -->
+				 
+				SUM(t.resp_num_1) AS resp1,<!-- 应答 [0s-1s]-->
+				SUM(t.resp_num_2) AS resp2,<!-- 应答 (1s-5s] -->
+				SUM(t.resp_num_3) AS resp3,<!-- 应答 (5s-30s] -->
+				SUM(t.resp_num_4) AS resp4,<!-- 应答 (30s-60s] -->
+				SUM(t.resp_num_5) + SUM(t.resp_num_6) AS resp5,<!-- 应答 大于60秒 -->
+				SUM(t.resp_num_7) AS resp6,<!-- 应答超时 -->
+				t.data_time
+			FROM
+			(
+			    <!-- t_sms_channel_indexes_stat_yyyyMMdd表 -->
+				<foreach collection="tableList" item="i" separator=" UNION ALL ">
+					SELECT
+						`channel_id`,
+						`channel_name`,
+						`send_total_num`,
+						`send_sccuss_num`,
+						`report_num_1`,
+						`report_num_2`,
+						`report_num_3`,
+						`report_num_4`,
+						`report_num_5`,
+						`report_num_6`,
+						`report_num_7`,
+						`report_num_8`,
+						`report_num_9`,
+						`resp_num_1`,
+						`resp_num_2`,
+						`resp_num_3`,
+						`resp_num_4`,
+						`resp_num_5`,
+						`resp_num_6`,
+						`resp_num_7`,
+						`data_time`
+					FROM ${i} r
+				</foreach>
+			) t
+			WHERE 
+				t.data_time BETWEEN #{startTime} AND #{endTime}
+				AND channel_id = #{channelId}
+			GROUP BY t.data_time
+		) t2
+	</select>
+	
+	<select id="queryChannelQualityConfig" resultType="map">
+		SELECT
+			resp_rate,
+			report_rate,
+			send_success_rate,
+			send_failure_rate,
+			submit_failure_num,
+			data_type
+		FROM
+			t_sms_channel_quality_config
+	</select>
+	
+	<update id="updateChannelQualityConfig">
+		UPDATE 
+			t_sms_channel_quality_config
+		SET 
+			${clonum_name} = #{value}
+		WHERE
+			data_type = #{data_type}
+	</update>
+	
+	
+	
+	<!-- 查询通道回执率、应答率堆积图数据 -->
+	<select id="getClientReportRespStackData" resultType="map">
+		SELECT
+			ROUND((t2.report1 / t2.send_total_num) * 100,2) AS report1,
+			ROUND((t2.report2 / t2.send_total_num) * 100,2) AS report2,
+			ROUND((t2.report3 / t2.send_total_num) * 100,2) AS report3,
+			ROUND((t2.report4 / t2.send_total_num) * 100,2) AS report4,
+			ROUND((t2.report5 / t2.send_total_num) * 100,2) AS report5,
+			ROUND((t2.report6 / t2.send_total_num) * 100,2) AS report6,
+			<!--ROUND((t2.report7 / t2.send_total_num) * 100,2) AS report7,-->
+			ROUND((t2.delay1 / t2.send_total_num) * 100,2) AS delay1,
+			ROUND((t2.delay2 / t2.send_total_num) * 100,2) AS delay2,
+			ROUND((t2.delay3 / t2.send_total_num) * 100,2) AS delay3,
+			ROUND((t2.delay4 / t2.send_total_num) * 100,2) AS delay4,
+			ROUND((t2.delay5 / t2.send_total_num) * 100,2) AS delay5,
+			t2.send_total_num AS send_total_num,
+			DATE_FORMAT(t2.data_time, '%m/%d %H:%i') AS data_time
+		FROM (
+			SELECT
+				t.client_id AS client_id,
+				t.client_name AS client_name,
+				SUM(t.send_total_num) AS send_total_num,
+				SUM(t.report_num_1) AS report1,<!-- 回执 0至5秒 -->
+				SUM(t.report_num_2) AS report2,<!-- 回执 6至10秒 -->
+				SUM(t.report_num_3) + SUM(t.report_num_4) AS report3,<!-- 回执 11至30秒 -->
+				SUM(t.report_num_5) AS report4,<!-- 回执 31至60秒 -->
+				SUM(t.report_num_6) + SUM(t.report_num_7) +SUM(t.report_num_8) AS report5,<!-- 回执 大于60秒 -->
+				<!--SUM(t.report_num_7) AS report5, 回执 121至300 -->
+				<!--SUM(t.report_num_8) AS report6, 回执 大于300秒 -->
+				SUM(t.report_num_9) AS report6,<!-- 回执未返回 -->
+				SUM(t.order_delay_num_1) AS delay1,<!-- 订单延迟0-1秒 -->
+				SUM(t.order_delay_num_2) AS delay2,<!-- 订单延迟1-3秒 -->
+				SUM(t.order_delay_num_3) AS delay3,<!-- 订单延迟3-5秒 -->
+				SUM(t.order_delay_num_4) AS delay4,<!-- 订单延迟大于5秒 -->
+				SUM(t.order_delay_num_5) AS delay5,<!-- 未发送 -->
+				t.data_time
+			FROM
+			(
+			    <!-- t_sms_channel_indexes_stat_yyyyMMdd表 -->
+				<foreach collection="tableList" item="i" separator=" UNION ALL ">
+					SELECT
+						`client_id`,
+						`client_name`,
+						`send_total_num`,
+						`report_num_1`,
+						`report_num_2`,
+						`report_num_3`,
+						`report_num_4`,
+						`report_num_5`,
+						`report_num_6`,
+						`report_num_7`,
+						`report_num_8`,
+						`report_num_9`,
+						`order_delay_num_1`,
+						`order_delay_num_2`,
+						`order_delay_num_3`,
+						`order_delay_num_4`,
+						`order_delay_num_5`,
+						`data_time`
+					FROM ${i} r
+				</foreach>
+			) t
+			WHERE 
+				t.data_time BETWEEN #{startTime} AND #{endTime}
+				AND client_id = #{clientId}
+			GROUP BY t.data_time
+		) t2
+	</select>
+	<select id="getClientSuccessRateStackData" resultType="ClientSuccessRateRealtime">
+		SELECT
+	        id,
+	        client_id as clientId,
+	        client_name as clientName,
+	        send_total as sendTotal,
+	        really_success_total as reallySuccessTotal,
+	        fake_success_fail as fakeSuccessFail,
+	        charge1,
+	        charge2,
+	        really_fail_total as reallyFailTotal,
+	        audit_fail_total as auditFailTotal,
+	        submit_fail_total as submitFailTotal,
+	        intercept_total as interceptTotal,
+	        nosend,
+	        send_fail_toatl as sendFailToatl,
+	        send_all as sendAll,
+	        success_rate as successRate,
+	        fake_success_rate as fakeSuccessRate,
+	        really_fail_rate as reallyFailRate,
+	        data_time as dataTime,
+	        create_time as createTime
+		FROM t_sms_client_success_rate_realtime
+		WHERE
+           client_id=#{clientId}
+         and data_time BETWEEN #{startTime} AND #{endTime}
+	</select>
+	
+	<select id="getChannelSuccessRateStackData" resultType="ChannelSuccessRateRealtime">
+		SELECT
+	        id,
+	        channel_id as channelId,
+	        channel_name as channelName,
+	        iden as iden,
+	        send_total as sendTotal,
+	        success_total as successTotal,
+	        submit_fail as submitFail,
+	        send_fail as sendFail,
+	        undetermined1,
+	        undetermined2,
+	        nosend,
+	        success_rate as successRate,
+	        fake_success_rate as fakeSuccessRate,
+	        really_fail_rate as reallyFailRate,
+	        success_rate as successRate,
+	        fake_success_rate as fakeSuccessRate,
+	        really_fail_rate as reallyFailRate,
+	        data_time as dataTime,
+	        create_time as createTime
+		FROM t_sms_channel_success_rate_realtime
+		WHERE
+           channel_id=#{channelId}
+         and data_time BETWEEN #{startTime} AND #{endTime}
+	</select>
+</mapper>

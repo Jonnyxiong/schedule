@@ -1,0 +1,965 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 通道测试管理 -->
+<mapper namespace="channelTest">
+
+	<select id="channelTestQuery" resultType="map">
+		SELECT
+			`channel_id`,
+			`channel_name`,
+			`account`,
+			`password`,
+			`operators_type`,
+			`access_id`,
+			`sp_id`,
+			`service_id`,
+			`mt_ip`,
+			`mt_port`,
+			`node_id`,
+			`speed`,
+			`is_report`,
+			`is_mo`,
+			`is_long_sms`,
+			`test_port`,
+			`test_url`,
+			`protocol_type`,
+			`extend_size`,
+			`need_prefix`,
+			`state`,
+			`remark`,
+			`admin_id`,
+			date_format(
+				create_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS create_time,
+			date_format(
+				update_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_time,
+			`report_id`
+		FROM t_sms_test_channel
+		<include refid="channelTestQueryCondition"/>
+	</select>
+	
+	<select id="channelTestQueryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_test_channel
+		<include refid="channelTestQueryCondition"/>
+	</select>
+
+	<sql id="channelTestQueryCondition">
+		<where>
+			<if test="text != null and text != ''">
+				(
+					channel_id LIKE CONCAT("%", #{text}, "%")
+					OR
+					channel_name LIKE CONCAT("%", #{text}, "%")
+				)
+			</if>
+			<if test="testIp != null and testIP != ''">
+				AND test_url LIKE CONCAT("%", #{testIp}, "%")
+			</if>
+			<if test="start_time != null">
+				AND create_time >= #{start_time}
+			</if>
+			<if test="end_time != null">
+				<![CDATA[ AND create_time <= #{end_time} ]]>
+			</if>
+		</where>
+	</sql>
+	
+	<select id="channelTestView" resultType="map">
+		SELECT
+			`channel_id`,
+			`channel_name`,
+			`account`,
+			`password`,
+			`operators_type`,
+			`access_id`,
+			`sp_id`,
+			`service_id`,
+			`mt_ip`,
+			`mt_port`,
+			`node_id`,
+			`speed`,
+			`is_report`,
+			`is_mo`,
+			`is_long_sms`,
+			`test_port`,
+			`test_url`,
+			`protocol_type`,
+			`extend_size`,
+			`need_prefix`,
+			`state`,
+			`remark`,
+			`admin_id`,
+			`create_time`,
+			`update_time`
+		FROM t_sms_test_channel
+		WHERE channel_id = #{id}
+	</select>
+	
+	<select id="checkSave" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_test_channel
+		WHERE
+			channel_name = #{channel_name}
+		<if test="id != null and id != ''">
+			AND channel_id != #{id}
+		</if>
+	</select>
+	
+	<insert id="save">
+		INSERT INTO `t_sms_test_channel` (
+			`channel_id`,
+			`channel_name`,
+			`account`,
+			`password`,
+			`operators_type`,
+			`access_id`,
+			`sp_id`,
+			`service_id`,
+			`mt_ip`,
+			`mt_port`,
+			`node_id`,
+			`speed`,
+			`is_report`,
+			`is_mo`,
+			`is_long_sms`,
+			`test_port`,
+			`test_url`,
+			`protocol_type`,
+			`extend_size`,
+			`need_prefix`,
+			`state`,
+			`remark`,
+			`admin_id`,
+			`create_time`,
+			`update_time`
+		)
+		VALUES
+			(
+				#{channel_id},
+				#{channel_name},
+				#{account},
+				#{password},
+				#{operators_type},
+				#{access_id},
+				#{sp_id},
+				#{service_id},
+				#{mt_ip},
+				#{mt_port},
+				#{node_id},
+				#{speed},
+				#{is_report},
+				#{is_mo},
+				#{is_long_sms},
+				#{test_port},
+				#{test_url},
+				#{protocol_type},
+				#{extend_size},
+				#{need_prefix},
+				0,
+				#{remark},
+				#{admin_id},
+				NOW(),
+				NOW()
+			)
+	</insert>
+	
+	<update id="update">
+		UPDATE `t_sms_test_channel`
+		SET
+		 `channel_name` = #{channel_name},
+		 `account` = #{account},
+		 `password` = #{password},
+		 `operators_type` = #{operators_type},
+		 `access_id` = #{access_id},
+		 `sp_id` = #{sp_id},
+		 `service_id` = #{service_id},
+		 `mt_ip` = #{mt_ip},
+		 `mt_port` = #{mt_port},
+		 `node_id` = #{node_id},
+		 `speed` = #{speed},
+		 `is_report` = #{is_report},
+		 `is_mo` = #{is_mo},
+		 `is_long_sms` = #{is_long_sms},
+		 `test_port` = #{test_port},
+		 `test_url` = #{test_url},
+		 `protocol_type` = #{protocol_type},
+		 `extend_size` = #{extend_size},
+		 `need_prefix` = #{need_prefix},
+		 `state` = #{state},
+		 `remark` = #{remark},
+		 `admin_id` = #{admin_id},
+		 `update_time` = NOW()
+		WHERE
+			`channel_id` = #{id}
+	</update>
+	
+	<update id="updateChannelTestStatus">
+		UPDATE t_sms_test_channel
+		SET 
+			state = #{state},
+			admin_id = #{admin_id},
+			report_id = #{report_id},
+			update_time = NOW()
+		WHERE channel_id = #{channel_id}
+	</update>
+	
+	<update id="updateTestReport">
+		UPDATE t_sms_test_report
+		SET
+			test_comment = #{comment},
+			is_test_paas = #{is_test_paas}
+		WHERE
+			report_id = #{report_id}
+	</update>
+	
+	<select id="queryChannelTestRequestURL" resultType="string">
+		SELECT 
+			CONCAT(test_url,":",test_port) AS channelTestRequestURL 
+		FROM t_sms_test_channel
+		WHERE channel_id = #{channelId}
+			
+	</select>
+	
+	<select id="queryTemplate" resultType="map">
+		SELECT
+			`template_id`,
+			`template_name`,
+			`type`,
+			`content`,
+			`sign`,
+			`state`,
+			date_format(
+				create_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS create_time,
+			date_format(
+				update_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_time
+		FROM
+			t_sms_test_template
+		<include refid="queryTemplateCondition"/>
+		ORDER BY update_time DESC
+		${limit}
+	</select>
+	
+	<select id="queryTemplateCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_test_template
+		<include refid="queryTemplateCondition"/>
+	</select>
+	
+	<sql id="queryTemplateCondition">
+		<where>
+			<if test="type != null and type != ''">
+				type = #{type}
+			</if>
+			<if test="text != null and text != ''">
+				AND
+				(
+					template_id LIKE CONCAT('%', #{text}, '%')
+					OR
+					template_name LIKE CONCAT('%', #{text}, '%')	
+				)
+			</if>
+		</where>
+	</sql>
+	
+	<select id="getTemplateById" resultType="map">
+		SELECT
+			`template_id`,
+			`template_name`,
+			`type`,
+			`content`,
+			`sign`,
+			`state`,
+			date_format(
+				create_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS create_time,
+			date_format(
+				update_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_time
+		FROM
+			t_sms_test_template
+		WHERE
+			template_id = #{templateId}
+	</select>
+	
+	<delete id="delTemplateById">
+		DELETE FROM t_sms_test_template WHERE template_id = #{template_id}
+	</delete>
+	
+	<!-- 根据模板类型查重 -->
+	<select id="checkTemplateName" resultType="map">
+		SELECT
+			template_id,
+			template_name
+		FROM
+			t_sms_test_template
+		WHERE
+			template_name = #{template_name}
+	</select>
+	
+	<insert id="insertTemplate">
+		INSERT INTO `t_sms_test_template` (
+			`template_name`,
+			`type`,
+			`content`,
+			`sign`,
+			`state`,
+			`create_time`,
+			`update_time`,
+			`admin_id`
+			
+		)
+		VALUES
+			(
+				#{template_name},
+				#{type},
+				#{content},
+				#{sign},
+				1,
+				NOW(),
+				NOW(),
+				#{admin_id}
+			)
+	</insert>
+	
+	<update id="updateTemplateById">
+		UPDATE `t_sms_test_template`
+		SET 
+		 `template_name` = #{template_name},
+		 `type` = #{type},
+		 `content` = #{content},
+		 `sign` = #{sign},
+		 `state` = 1,
+		 `update_time` = NOW(),
+		 `admin_id` = #{admin_id}
+		WHERE
+			template_id = #{template_id}
+	</update>
+	
+	<select id="queryTestReportById" resultType="map">
+		SELECT
+			*
+		FROM
+			t_sms_test_report
+		WHERE
+			report_id = #{reportId}
+	</select>
+	
+	<select id="getAdminNameById" resultType="string">
+		SELECT realname FROM t_sms_user WHERE id = #{admin_id}
+	</select>
+	
+	<select id="queryTestPhone" resultType="map">
+		SELECT
+			`id`,
+			`phone`,
+			`name`,
+			`operators_type`,
+			`admin_id`,
+			date_format(
+				update_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_time
+		FROM
+			t_sms_test_phone_list
+		<where>
+			<if test="operators_type != null and operators_type != ''">
+				operators_type = #{operators_type}
+			</if>
+			<if test="text != null and text != ''">
+				AND (
+					phone LIKE CONCAT("%", #{text}, "%")
+					OR
+					name LIKE CONCAT("%", #{text}, "%")
+				)
+			</if>
+		</where>
+		ORDER BY update_time DESC
+		${limit}
+	</select>
+	
+	<select id="queryTestPhoneCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_test_phone_list
+		<where>
+			<if test="operators_type != null and operators_type != ''">
+				operators_type = #{operators_type}
+			</if>
+			<if test="text != null and text != ''">
+				AND
+				(
+					phone LIKE CONCAT("%", #{text}, "%")
+					OR
+					name LIKE CONCAT("%", #{text}, "%")
+				)
+			</if>
+		</where>
+	</select>
+	
+	<delete id="deleteTestPhone">
+		DELETE FROM t_sms_test_phone_list WHERE id = #{id}
+	</delete>
+	
+	<insert id="batchInsertTestPhone" parameterType="java.util.List">
+	   	INSERT INTO t_sms_test_phone_list (
+			`phone`,
+			`name`,
+			`operators_type`,
+			`admin_id`,
+			`update_time`
+		) VALUES
+	    <foreach collection="list" item="item" index="index" separator="," >
+	       (#{item.phone}, #{item.name}, #{item.operators_type}, #{item.admin_id}, NOW())
+	    </foreach>
+  	</insert>
+  	
+  	<select id="queryTestTeamplate4Select" resultType="map">
+  		SELECT
+			template_id AS value,
+			CONCAT(
+				template_id,
+				'-',
+				template_name
+			) AS label
+		FROM
+			t_sms_test_template
+  	</select>
+  	
+  	<!-- 插入通道智能测试日志 -->
+  	<insert id="insertChannelTestLog">
+  		INSERT INTO `t_sms_test_log` (
+			`channel_id`,
+			`report_id`,
+			`test_num`,
+			`template_id`,
+			`test_mobiles`,
+			`submit_time`
+		)
+		VALUES
+			(
+				#{channel_id},
+				0,
+				#{test_num},
+				#{template_id},
+				#{test_mobiles},
+				NOW()
+			)
+  	</insert>
+	
+	<!-- 查询通道测试流水表生成通道质量指数 -->
+	<select id="getChannelTestIndexes" resultType="map">
+		SELECT
+			t.channel_id AS channel_id,
+			t.channel_name AS channel_name,
+			COUNT(1) AS send_total_num,
+			SUM(IF(t.state = 0,1,0)) AS no_send_num,
+			SUM(IF(t.state = 1,1,0)) AS submit_success_num,
+			SUM(IF(t.state = 2,1,0)) AS subret_success_num,
+			SUM(IF(t.state = 3,1,0)) AS send_success_num,
+			SUM(IF(t.state = 4,1,0)) AS submit_failure_num,
+			SUM(IF(t.state = 5,1,0)) AS subret_failure_num,
+			SUM(IF(t.state = 6,1,0)) AS send_failure_num,
+			SUM(IF(t.respTime BETWEEN 0 AND 2,1,0)) AS resp_num_1,
+			SUM(IF(t.respTime BETWEEN 3 AND 10,1,0)) AS resp_num_2,
+			SUM(IF(t.respTime BETWEEN 11 AND 300,1,0)) AS resp_num_3,
+			SUM(IF(t.respTime > 300,1,0)) AS resp_num_4,
+			SUM(IF(t.respTime > 300 AND state = 1,1,0)) AS resp_num_5,
+			SUM(IF(t.reportTime BETWEEN 0 AND 5,1,0)) AS report_num_1,
+			SUM(IF(t.reportTime BETWEEN 6 AND 10,1,0)) AS report_num_2,
+			SUM(IF(t.reportTime BETWEEN 11 AND 30,1,0)) AS report_num_3,
+			SUM(IF(t.reportTime BETWEEN 31 AND 60,1,0)) AS report_num_4,
+			SUM(IF(t.reportTime BETWEEN 61 AND 300,1,0)) AS report_num_5,
+			SUM(IF(t.reportTime > 300,1,0)) AS report_num_6,
+			SUM(IF(t.state REGEXP '^1$|2',1,0)) AS report_num_7,
+			NOW() AS create_time
+		FROM
+		(
+			SELECT
+				channel_id,
+				channel_name,
+				state,
+				TIMESTAMPDIFF(SECOND, submitdate, subretdate) AS respTime,
+				TIMESTAMPDIFF(SECOND, submitdate, reportdate) AS reportTime
+			FROM t_sms_test_mt
+			WHERE 
+				channel_id = #{channelId} AND report_id = "0"
+		) t
+		GROUP BY t.channel_id
+	</select>
+	
+	<insert id="insertChannelTestIndexes">
+		INSERT INTO `t_sms_test_indexes_stat` (
+			`channel_id`,
+			`channel_name`,
+			`send_total_num`,
+			`no_send_num`,
+			`submit_success_num`,
+			`subret_success_num`,
+			`send_success_num`,
+			`submit_failure_num`,
+			`subret_failure_num`,
+			`send_failure_num`,
+			`resp_num_1`,
+			`resp_num_2`,
+			`resp_num_3`,
+			`resp_num_4`,
+			`resp_num_5`,
+			`report_num_1`,
+			`report_num_2`,
+			`report_num_3`,
+			`report_num_4`,
+			`report_num_5`,
+			`report_num_6`,
+			`report_num_7`,
+			`create_time`,
+			`report_id`
+		)
+		VALUES
+			(
+				#{channel_id},
+				#{channel_name},
+				#{send_total_num},
+				#{no_send_num},
+				#{submit_success_num},
+				#{subret_success_num},
+				#{send_success_num},
+				#{submit_failure_num},
+				#{send_failure_num},
+				#{send_failure_num},
+				#{resp_num_1},
+				#{resp_num_2},
+				#{resp_num_3},
+				#{resp_num_4},
+				#{resp_num_5},
+				#{report_num_1},
+				#{report_num_2},
+				#{report_num_3},
+				#{report_num_4},
+				#{report_num_5},
+				#{report_num_6},
+				#{report_num_7},
+				NOW(),
+				#{report_id}
+			)
+	</insert>
+	
+	<!-- 统计通道智能测试错误码信息 -->
+	<select id="getChannelTestErrorData" resultType="map">
+		SELECT
+			 t.channel_id AS channel_id,
+			 t.channel_name AS channel_name,
+			 t.state AS sms_state,
+			 CASE t.state
+				WHEN 1 THEN CONCAT('（', state, '）', submit)
+				WHEN 4 THEN CONCAT('（', state, '）', submit)
+				WHEN 5 THEN CONCAT('（', state, '）', subret)
+				WHEN 6 THEN CONCAT('（', state, '）', report)
+			 END AS error_code,
+			 t.error_num,
+			 #{report_id} AS report_id
+		FROM
+		(
+			SELECT
+				channel_id,
+				channel_name,
+				state,
+				submit,
+				subret,
+				report,
+				COUNT(1) AS error_num
+			FROM
+				t_sms_test_mt
+			WHERE
+				state IN (1, 4, 5, 6)
+				AND
+		    	channel_id = #{channelId}
+		    	AND
+		    	report_id = "0"
+			GROUP BY
+				state,
+				submit,
+				subret,
+				report
+		) t
+	</select>
+	
+	<!-- 插入通道智能测试的通道错误码信息 -->
+	<insert id="insertChannelTestErrorData">
+		INSERT INTO `t_sms_test_error_stat` (
+			`channel_id`,
+			`channel_name`,
+			`sms_state`,
+			`error_code`,
+			`error_num`,
+			`data_time`,
+			`create_time`,
+			`report_id`
+		)
+		VALUES
+		<foreach collection="dataList"  item="i" separator=",">
+			(
+				#{i.channel_id},
+				#{i.channel_name},
+				#{i.sms_state},
+				#{i.error_code},
+				#{i.error_num},
+				#{i.data_time},
+				NOW(),
+				#{i.report_id}
+			)
+		</foreach>
+			
+	</insert>
+	
+	<!-- 查询通道登录状态 -->
+	<select id="queryChannelTestLoginStatus" resultType="map">
+		SELECT
+			login_status,
+			login_desc
+		FROM
+			t_sms_test_channel_login
+		WHERE
+			channel_id = #{channelId}
+	</select>
+	
+	<!-- 判断是否支持状态报告 -->
+	<select id="queryIsSupportReport" resultType="map">
+		SELECT
+			IF(COUNT(1) > 0, 1, 0)AS totalCount
+		FROM
+			t_sms_test_mt
+		WHERE
+			channel_id = #{channelId}
+			AND (state = 3 OR state = 6)
+			AND report_id = "0"
+	</select>
+	
+	<!-- 判断是否支持长短信-->
+	<select id="queryIsSupportLongSms" resultType="map">
+		SELECT
+			IF(COUNT(1) > 0, 1, 0)AS totalCount
+		FROM
+			t_sms_test_mt
+		WHERE
+			channel_id = #{channelId}
+			AND state = 3
+			AND longsms = 1
+			AND report_id = "0"
+	</select>
+	
+	<!-- 判断是否支持上行-->
+	<select id="queryIsSupportUpstream" resultType="map">
+		SELECT
+			IF(COUNT(1) > 0, 1, 0)AS totalCount
+		FROM
+			t_sms_test_mo
+		WHERE
+			channel_id = #{channelId}
+			AND report_id = "0"
+	</select>
+	
+	<!-- 插入智能测试报告 -->
+	<insert id="insertChannelTestReport">
+		INSERT INTO `t_sms_test_report` (
+			`report_id`,
+			`channel_id`,
+			`login_status`,
+			`login_desc`,
+			`account`,
+			`password`,
+			`operators_type`,
+			`access_id`,
+			`sp_id`,
+			`service_id`,
+			`mt_ip`,
+			`mt_port`,
+			`is_report`,
+			`is_long_sms`,
+			`extend_size`,
+			`protocol_type`,
+			`is_mo`,
+			`admin_id`,
+			`create_time`,
+			`report_type`
+		)
+		VALUES
+			(
+					#{report_id},
+					#{channel_id},
+					#{login_status},
+					#{login_desc},
+					#{account},
+					#{password},
+					#{operators_type},
+					#{access_id},
+					#{sp_id},
+					#{service_id},
+					#{mt_ip},
+					#{mt_port},
+					#{is_report},
+					#{is_long_sms},
+					#{extend_size},
+					#{protocol_type},
+					#{is_mo},
+					#{admin_id},
+					NOW(),
+					#{report_type}
+			)
+	</insert>
+	
+	<update id="updateChannelTestReportId">
+		UPDATE t_sms_test_channel
+		SET 
+			report_id = #{reportId},
+			update_time = NOW()
+		WHERE channel_id = #{channelId}
+	</update>
+	
+	<update id="updateChannelTestRecordReportId">
+		UPDATE t_sms_test_channel SET report_id = #{reportId} WHERE channel_id = #{channelId}
+	</update>
+	
+	<!-- 查询用户接入申请详情 -->
+	<select id="queryChannelTestDetailsByChannelId" resultType="map">
+		SELECT
+			*
+		FROM
+			t_sms_test_channel
+		WHERE
+			channel_id = #{channelId}
+	</select>
+	
+	<!-- 根据channelId更新智能测试记录表中的reportId -->
+	<update id="updateChannelTestLogReportId">
+		UPDATE t_sms_test_log
+			SET report_id = #{reportId}
+		WHERE 
+			channel_id = #{channelId} AND report_id = '0'
+	</update>
+	
+	<!-- 根据channelId更新智能发送流水表中的reportId -->
+	<update id="updateMtRecordReportId">
+		UPDATE t_sms_test_mt
+			SET report_id = #{reportId}
+		WHERE 
+			channel_id = #{channelId} AND report_id = '0'
+	</update>
+	
+	<!-- 根据channelId更新智能上行流水表中的reportId -->
+	<update id="updateMoRecordReportId">
+		UPDATE t_sms_test_mo
+			SET report_id = #{reportId}
+		WHERE 
+			channel_id = #{channelId} AND report_id = '0'
+	</update>
+	
+	<!-- 查询最后一次提交测试且还没有生成测试报告的测试记录 -->
+	<select id="queryTestLogNotGenerateReport" resultType="string">
+		SELECT
+			report_id
+		FROM
+			t_sms_test_log
+		WHERE
+			channel_id = #{channelId}
+		AND report_id = "0"
+		ORDER BY submit_time DESC
+		LIMIT 1
+	</select>
+	
+	
+	<!-- 发送状态echart数据 -->
+	<select id="getCloudSmsStateByReportId" resultType="map">
+		SELECT
+			`no_send_num`,
+			`submit_success_num`,
+			`subret_success_num`,
+			`send_success_num`,
+			`submit_failure_num`,
+			`subret_failure_num`,
+			`send_failure_num`
+		FROM
+			t_sms_test_indexes_stat
+		WHERE
+			report_id = #{reportId}
+	</select>
+	
+	<!-- 通道回执分布状态echart数据 -->
+	<select id="getReportIndexesByReportId" resultType="map">
+		SELECT
+			`report_num_1`,
+			`report_num_2`,
+			`report_num_3`,
+			`report_num_4`,
+			`report_num_5`,
+			`report_num_6`,
+			`report_num_7`
+		FROM
+			t_sms_test_indexes_stat
+		WHERE
+			report_id = #{reportId}
+	</select>
+	
+	<!-- 通道应答分布状态echart数据 -->
+	<select id="getRespIndexesByReportId" resultType="map">
+		SELECT
+			`resp_num_1`,
+			`resp_num_2`,
+			`resp_num_3`,
+			`resp_num_4`,
+			`resp_num_5`
+		FROM
+			t_sms_test_indexes_stat
+		WHERE
+			report_id = #{reportId}
+	</select>
+	
+	<select id="queryChannelTestErrorByReportId" resultType="map">
+		SELECT * FROM
+		(
+			SELECT
+				channel_id,
+				channel_name,
+				error_code,
+				SUM(error_num) AS error_num
+			FROM
+			t_sms_test_error_stat
+			WHERE
+				report_id = #{reportId}
+			GROUP BY
+				error_code
+		) t
+		ORDER BY t.error_num DESC
+		LIMIT 10
+	</select>
+	
+	<select id="queryTestSendRecord" resultType="map">
+		SELECT * FROM t_sms_test_mt
+		<where>
+			<if test="text != null and text != ''">
+				channel_name LIKE CONCAT('%', #{text}, '%')
+				OR
+				phone LIKE CONCAT('%', #{text}, '%')
+			</if>
+		</where>
+		ORDER BY date DESC
+		${limit}
+	</select>
+	
+	<select id="queryTestSendRecordCount" resultType="map">
+		SELECT COUNT(1) AS totalCount FROM t_sms_test_mt
+		<where>
+			<if test="text != null and text != ''">
+				channel_name LIKE CONCAT('%', #{text}, '%')
+				OR
+				phone LIKE CONCAT('%', #{text}, '%')
+			</if>
+		</where>
+	</select>
+	
+	<select id="queryTestUpstreamRecord" resultType="map">
+		SELECT * FROM t_sms_test_mo
+		<where>
+			<if test="text != null and text != ''">
+				channel_id LIKE CONCAT('%', #{text}, '%')
+				OR
+				phone LIKE CONCAT('%', #{text}, '%')
+			</if>
+		</where>
+		${limit}
+	</select>
+	
+	<select id="queryTestUpstreamRecordCount" resultType="map">
+		SELECT COUNT(1) AS totalCount FROM t_sms_test_mo
+		<where>
+			<if test="text != null and text != ''">
+				channel_id LIKE CONCAT('%', #{text}, '%')
+				OR
+				phone LIKE CONCAT('%', #{text}, '%')
+			</if>
+		</where>
+	</select>
+	
+	<select id="queryReportIdByChannelId" resultType="string">
+		SELECT
+			report_id
+		FROM
+			t_sms_test_channel
+		WHERE
+			channel_id = #{channelId}
+	</select>
+	
+	<update id="updateChannelStatus">
+		UPDATE t_sms_test_channel
+		SET state = #{state},
+			admin_id = #{adminId},
+			update_time = NOW()
+		WHERE
+			channel_id = #{channelId}
+	</update>
+	
+	<select id="queryAllTestPhone" resultType="string">
+		SELECT phone FROM t_sms_test_phone_list
+	</select>
+	
+	<insert id="insertTestPhone">
+		INSERT INTO `t_sms_test_phone_list` (
+			`phone`,
+			`name`,
+			`operators_type`,
+			`admin_id`,
+			`update_time`
+		)
+		VALUES
+			(
+				#{phone},
+				#{name},
+				#{operators_type},
+				#{admin_id},
+				NOW()
+			)
+	</insert>
+	
+	<update id="updateTestPhone">
+		UPDATE `t_sms_test_phone_list`
+		SET 
+		 `phone` = #{phone},
+		 `name` = #{name},
+		 `operators_type` = #{operators_type},
+		 `admin_id` = #{admin_id},
+		 `update_time` = NOW()
+		WHERE
+			id = #{id}
+	</update>
+	
+	<select id="checkTestPhone" resultType="int">
+		SELECT COUNT(1) FROM t_sms_test_phone_list
+		WHERE phone = #{phone}
+		<if test="id != null and id !=''">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<select id="getOneTestPhone" resultType="map">
+		SELECT id, phone, `name`, operators_type FROM  t_sms_test_phone_list WHERE id = #{id}
+	</select>
+	
+</mapper> 

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户短信通道管理-签名扩展号管理-->
+<mapper namespace="sign">
+
+	<!-- 查询条件 -->
+	<sql id="search_sql">
+		where 1=1
+		<if test="ids != null">
+			AND  s.channelid LIKE concat('%', #{ids}, '%')
+		</if>
+		<if test="sid != null">
+			AND s.sid LIKE concat('%', #{sid}, '%')
+			
+		</if>
+		<if test="sign != null">
+			AND s.sign LIKE concat('%', #{sign}, '%')
+		</if>
+		<if test="appendid != null">
+			AND s.appendid LIKE concat('%', #{appendid}, '%')
+		</if>
+		<if test="clientid != null">
+			AND s.clientid LIKE concat('%', #{clientid}, '%')
+		</if>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			GROUP_CONCAT(s.id) as id,
+			s.channelid,
+			c.channelname,
+			s.username,
+			s.sign ,
+			s.appendid,
+			GROUP_CONCAT(s.clientid) as clientid,
+			s.fee_terminal_id
+		FROM
+			t_signextno_gw s
+		LEFT JOIN t_sms_channel c on s.channelid=c.cid
+		
+		<include refid="search_sql"/>
+		GROUP BY s.channelid,s.sign,s.appendid
+		ORDER BY
+			s.id desc
+		${limit}
+
+	</select>
+
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_signextno_gw s
+		LEFT JOIN t_sms_channel c on s.channelid=c.cid
+		<include refid="search_sql"/>
+		
+	</select>
+
+	<!-- 查看 -->
+	<select id="view" resultType="map">
+		SELECT
+			t.channelid,
+			t.id,
+			t.username,
+			t.sign,
+			t.appendid,
+			t.clientid,
+			t.fee_terminal_id
+		FROM
+			t_signextno_gw t
+		WHERE
+			t.id =#{logId}
+	</select>
+
+	<select id="checkSave1" resultType="map">
+		SELECT
+			id
+		FROM t_signextno_gw
+		WHERE
+			channelid = #{channelid}
+		AND
+			appendid = #{appendid}
+		AND sign = #{sign} AND clientid=#{clientid}
+
+		limit 1
+	</select>
+	
+	<!-- 在同一channelid下，clientid唯一 -->
+	<select id="checkSave2" resultType="map">
+		SELECT id FROM t_signextno_gw WHERE clientid = #{clientid} AND channelid = #{channelid} LIMIT 1
+	</select>
+
+	<insert id="insertSign">
+		insert into
+			t_signextno_gw(channelid,username,sign,appendid,clientid, fee_terminal_id)
+		VALUES(#{channelid},#{username},#{sign},#{appendid},#{clientid}, #{fee_terminal_id})
+	</insert>
+
+	<update id="updateSign">
+		update  t_signextno_gw t 
+				set t.sign=#{sign}  ,
+				t.channelid=#{channelid},
+				t.username = #{username},
+				t.appendid=#{appendid},
+				t.clientid=#{clientid},
+				t.fee_terminal_id=#{fee_terminal_id}
+				where  t.id=#{id}
+	</update>
+
+	<!-- 删除模板 -->
+	<delete id="delete">
+		delete from t_signextno_gw  where id=#{id}
+	</delete>
+	
+	<!-- 同一通道下扩展号唯一 -->
+	<select id="checkAppendIdExist" resultType="map">
+		SELECT
+			id
+		FROM
+			t_signextno_gw
+		WHERE
+			channelid = #{channelid} and sign=#{sign} and clientid=#{clientid}
+		AND appendid != #{appendid}
+		<if test="id != null">
+			AND id NOT IN
+
+			<foreach item="item" index="index" collection="id" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+
+		</if>
+		LIMIT 1
+	</select>
+
+	<!-- 根据通道号、签名、扩展号查询相同数据 -->
+	<select id="searchAlldata" resultType="map">
+		SELECT
+		id,clientid,username,fee_terminal_id
+		FROM
+		t_signextno_gw
+		WHERE
+		channelid = #{channelid} and sign=#{sign}
+		AND appendid = #{appendId}
+
+	</select>
+
+	<!-- 根据通道号和短信签名查看是否存在 -->
+	<select id="checkSignExist" resultType="map">
+		SELECT
+			id
+		FROM
+			t_signextno_gw
+		WHERE
+			channelid = #{channelid} 
+		AND sign = #{sign}
+		<if test="id != null">
+			AND id NOT IN
+
+			<foreach item="item" index="index" collection="id" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+
+		</if>
+		LIMIT 1
+	</select>
+	
+	
+	<!-- 在同一channelid下，若存在clientid有值，appendid为空的记录，表示则通道已唯一分配给这个用户；此时，不能再针对此channelid进行端口分配-->
+	<select id="channelAppendIdCheck1" resultType="map">
+		SELECT
+			id
+		FROM
+			t_signextno_gw
+		WHERE 1=1
+			<if test="id != null">
+			AND id != #{id}
+			</if>
+			AND channelid = #{channelid}  
+			<![CDATA[ AND (LENGTH(trim(appendid))<1 OR ISNULL(appendid)) ]]>
+			LIMIT 1
+	</select>
+	
+	<select id="channelAppendIdCheck3" resultType="map">
+		SELECT 
+			id 
+		FROM 
+			t_signextno_gw 
+		WHERE 1=1
+			<if test="id != null">
+				AND id != #{id}
+			</if>
+			AND channelid = #{channelid} 
+			AND appendid IS NOT NULL 
+			LIMIT 1
+	</select>
+	
+	<select id="getAllAppendIdByChannelId" resultType="string">
+		SELECT
+			appendid
+		FROM
+			t_signextno_gw
+		WHERE
+			channelid = #{channelid} AND  sign=#{sign}
+			<if test="id != null">
+			AND id NOT IN
+				<foreach item="item" index="index" collection="id" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+			</if>
+	</select>
+	
+	<select id="getAllChannelTypeByChannelId" resultType="map">
+		SELECT
+			channeltype
+		FROM
+			t_sms_channel
+		WHERE
+			cid = #{channelid}
+		LIMIT 1
+	</select>
+	
+</mapper>

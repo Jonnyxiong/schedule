@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户短信通道管理-短信通道配置 -->
+<mapper namespace="channel">
+
+	<sql id="search_segement">
+		<where>
+			<if test="cid!=null">
+				and c.cid LIKE CONCAT('%', #{cid},'%')
+			</if>
+			<if test="identify != null">
+				and c.identify = #{identify}
+			</if>
+			<if test="sendid != null">
+				and c.sendid = #{sendid}
+			</if>
+			<if test="state!=null and state!=-1">
+				and c.state = #{state}
+			</if>
+			<!-- 通道管理中不显示“下架”通道 -->
+			<if test="state == -1">
+				and c.state != 3
+			</if>
+			<if test="remark!=null and remark!=''">
+				and c.remark LIKE CONCAT('%', #{remark},'%')
+			</if>
+		</where>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			c.id,
+			c.cid,
+			c.channelname,
+			c.operatorstype,
+			c.sendid,
+			c.httpmode,
+			c.state,
+			c.querystateurl,
+			c.querystatepostdata,
+			c.speed,
+			c.access_speed,
+			c.sliderwindow,
+			date_format(
+				c.createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime,
+			c.remark,
+			c.extendsize,
+			c.channeltype,
+			c.identify,
+			c.channeltype,
+			c.sendtimearea,
+			c.access_speed,
+			c.mq_id,
+			c.clientid,
+			c.segcode_type,
+			c.httpmode,
+			s.login_status,
+			s.login_desc,
+			area.name AS segName,
+			c.belong_business,
+			c.moprefix
+		FROM
+			t_sms_channel c
+		LEFT JOIN t_sms_channel_login_status s
+		ON c.cid = s.cid
+		LEFT JOIN t_sms_segcode_channel sc
+		ON c.cid = sc.channel_id
+		LEFT JOIN (
+			SELECT
+				area_id, `name`
+			FROM
+				t_sms_area
+			WHERE
+				parent_id = 0
+		) area
+		ON area.area_id = sc.code 
+		<include refid="search_segement"/>
+		order by c.cid 
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+		t_sms_channel c
+		<include refid="search_segement"/>
+	</select>
+
+	<!-- 查看短信通道 -->
+	<select id="view" resultType="map">
+		SELECT
+			c.*, sc.code AS segcode
+		FROM
+			t_sms_channel c
+		LEFT JOIN t_sms_segcode_channel sc
+		ON c.cid = sc.channel_id
+		where c.id = #{id}
+	</select>
+
+	<select id="checkSave" resultType="map">
+		SELECT
+		id
+		FROM t_sms_channel
+		WHERE cid = #{cid}
+		<if test="id != null">
+			AND id != #{id}
+		</if>
+		limit 1
+	</select>
+	
+	<!-- 添加短信通道 -->
+	<insert id="insertChannel" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO t_sms_channel (
+			cid,
+			clientid,
+			PASSWORD,
+			channelname,
+			warn_succ_rate,
+			operatorstype,
+			longsms,
+			wappush,
+			httpmode,
+			url,
+			coding,
+			postdata,
+			costprice,
+			querystateurl,
+			querystatepostdata,
+			oauth_url,
+			oauth_post_data,
+			queryupurl,
+			queryuppostdata,
+			shownum,
+			showsign,
+			showsigntype,
+			accessid,
+			node,
+			spid,
+			state,
+			createtime,
+			updatetime,
+			sendid,
+			moip,
+			moport,
+			serviceid,
+			speed,
+			channeltype,
+			iswhitelist,
+			support_ohas,
+			remark,
+			extendsize,
+			warn_time_rate,
+			needprefix,
+			identify,
+			sendtimearea,
+			maxqueuesize,
+			sliderwindow,
+			owner_type,
+			industrytype,
+			access_speed,
+			add_temp_url,
+			add_temp_post_data,
+			get_temp_list_url,
+			get_temp_list_post_data,
+			contentlen,
+			mq_id,
+			segcode_type,
+			belong_business,
+			cluster_type,
+			cluster_max_number,
+			cluster_max_time,
+			protocol_type,
+			lib_name,
+			exvalue,
+			nodenum,
+			moprefix
+		)
+		VALUES
+			(
+				#{cid},
+				#{clientid},
+				#{password},
+				#{channelname},
+				#{warn_succ_rate},
+				#{operatorstype},
+				#{longsms},
+				#{wappush},
+				#{httpmode},
+				#{url},
+				#{coding},
+				#{postdata},
+				#{costprice},
+				#{querystateurl},
+				#{querystatepostdata},
+				#{oauth_url},
+			    #{oauth_post_data},
+				#{queryupurl},
+				#{queryuppostdata},
+				#{shownum},
+				#{showsign},
+				#{showsigntype},
+				#{accessid},
+				#{node},
+				#{spid},
+				0,<!-- state -->
+				now(),
+				now(),
+				#{sendid},
+				#{moip},
+				#{moport},
+				#{serviceid},
+				#{speed},
+				#{channeltype},
+				#{iswhitelist},
+				#{support_ohas},
+				#{remark},
+				#{extendsize},
+				#{warn_time_rate},
+				#{needprefix},
+				#{identify},
+				#{sendtimearea},
+				#{maxqueuesize},
+				#{sliderwindow},
+				#{owner_type},
+				#{industrytype},
+				#{access_speed},
+				#{add_temp_url},
+				#{add_temp_post_data},
+				#{get_temp_list_url},
+				#{get_temp_list_post_data},
+				#{contentlen},
+				#{mq_id},
+				#{segcode_type},
+				#{belong_business},
+				#{cluster_type},
+				#{cluster_max_number},
+				#{cluster_max_time},
+				#{protocol_type},
+				#{lib_name},
+				#{exvalue},
+				#{nodenum},
+				#{moprefix}
+			)
+	</insert>
+	
+	<!-- 修改短信通道 -->
+	<update id="updateChannel">
+		UPDATE t_sms_channel
+		SET cid = #{cid},
+		clientid = #{clientid},
+		PASSWORD = #{password},
+		channelname = #{channelname},
+		remark = #{remark},
+		warn_succ_rate = #{warn_succ_rate},
+		operatorstype = #{operatorstype},
+		longsms = #{longsms},
+		wappush = #{wappush},
+		httpmode = #{httpmode},
+		url = #{url},
+		coding = #{coding},
+		postdata = #{postdata},
+		costprice = #{costprice},
+		querystateurl = #{querystateurl},
+		querystatepostdata = #{querystatepostdata},
+		queryupurl = #{queryupurl},
+		queryuppostdata = #{queryuppostdata},
+		shownum = #{shownum},
+		showsign = #{showsign},
+		showsigntype = #{showsigntype},
+		accessid = #{accessid},
+		node = #{node},
+		spid = #{spid},
+		updatetime = now(),
+		sendid = #{sendid},
+		moip = #{moip},
+		moport = #{moport},
+		serviceid = #{serviceid},
+		speed =	#{speed},
+		channeltype = #{channeltype},
+		iswhitelist = #{iswhitelist},
+		support_ohas = #{support_ohas},
+		extendsize = #{extendsize},
+		warn_time_rate = #{warn_time_rate},
+		needprefix = #{needprefix},
+		<if test="identify != null and identify != ''">
+			identify = #{identify},
+		</if>
+		sendtimearea = #{sendtimearea},
+		maxqueuesize = #{maxqueuesize},
+		sliderwindow = #{sliderwindow},
+		owner_type = #{owner_type},
+		industrytype = #{industrytype},
+		access_speed = #{access_speed},
+		oauth_url = #{oauth_url},
+		oauth_post_data = #{oauth_post_data},
+		add_temp_url = #{add_temp_url},
+		add_temp_post_data = #{add_temp_post_data},
+		get_temp_list_url =	#{get_temp_list_url},
+		get_temp_list_post_data = #{get_temp_list_post_data},
+		contentlen = #{contentlen},
+<!-- 		mq_id = #{mq_id}, -->
+<!-- 		state = #{state}, -->
+		segcode_type = #{segcode_type},
+		belong_business = #{belong_business},
+		cluster_type = #{cluster_type},
+		cluster_max_number = #{cluster_max_number},
+		cluster_max_time = #{cluster_max_time},
+		protocol_type = #{protocol_type},
+		lib_name=#{lib_name},
+		exvalue=#{exvalue},
+		nodenum=#{nodenum},
+		moprefix=#{moprefix}
+		WHERE
+			id = #{id}
+	</update>
+	
+	<update id="updateStatus">
+		update t_sms_channel set
+		state = #{switch2State},updatetime = now()
+		where id = #{id}
+	</update>
+	
+	<!-- 根据通道id查询通道对应的流水表的标识 -->
+	<select id="getIdentifyByChannelId" resultType="map">
+		SELECT identify FROM t_sms_channel WHERE cid = #{channelid}
+	</select>
+	
+	<delete id="deleteChannelSegcode">
+		DELETE
+		FROM
+			t_sms_segcode_channel
+		WHERE
+			channel_id = #{cid}
+	</delete>
+	
+	<insert id="insertChannelSegcode">
+		INSERT INTO `t_sms_segcode_channel` (`id`, `channel_id`, `code`)
+		VALUES
+			(NULL, #{cid}, #{segcode})
+	</insert>
+	
+	<!-- 查询归属商务的真实姓名 -->
+	<select id="queryBelongBusinessName" resultType="string">
+		SELECT realname FROM t_sms_user WHERE id = #{belongBusiness}
+	</select>
+	
+	<!-- 查询Mq队列的名称 -->
+	<select id="queryMqQueueName" resultType="string">
+		SELECT queue_name FROM t_sms_mq_configure WHERE mq_id = #{mq_id}
+	</select>
+	
+	<!-- 查询中间件类型是 MQ_send_io 的中间件Id（该配置只可能有一条记录） -->
+	<select id="querySendIoMiddlewareId" resultType="string">
+		SELECT middleware_id FROM t_sms_middleware_configure WHERE middleware_type = 2 LIMIT 1
+	</select>
+	
+	<!-- 根据通道的主键Id字段查询当前通道的队列信息 -->
+	<select id="queryMqQueueInfo" resultType="map">	
+		SELECT
+			middleware_id,
+			mq_queue,
+			mq_exchange,
+			mq_routingkey
+		FROM
+			t_sms_mq_configure
+		WHERE
+			mq_id = (
+				SELECT mq_id FROM t_sms_channel WHERE cid = #{channelId}
+			)
+	</select>
+	
+	<select id="queryMqServerInfo" resultType="map">
+		SELECT
+			host_ip,
+			console_port,
+			user_name,
+			pass_word
+		FROM
+			t_sms_middleware_configure
+		WHERE
+			middleware_id = #{middlewareId}
+	</select>
+	
+	<select id="queryChannelRefChannelGroupNum" resultType="integer">
+		SELECT COUNT(1) FROM t_sms_channel_ref_channelgroup WHERE channelid = #{channelId}
+	</select>
+	
+	<select id="querySegmentChannelNum" resultType="integer">
+		SELECT COUNT(1) FROM t_sms_segment_channel WHERE channel_id = #{channelId}
+	</select>
+	
+	<delete id="deleteChannelGroupRef">
+		DELETE FROM t_sms_channel_ref_channelgroup WHERE channelid = #{channelId}
+	</delete>
+	
+	<delete id="deleteSegmentChannel">
+		DELETE FROM t_sms_segment_channel WHERE channel_id = #{channelId}
+	</delete>
+	
+	<delete id="deleteSignexGw">
+		DELETE FROM t_signextno_gw WHERE channelid = #{channelId}
+	</delete>
+	
+	<delete id="deleteChannelExtendport">
+		DELETE FROM t_sms_channel_extendport WHERE channelid = #{channelId}
+	</delete>
+	
+	<delete id="deleteChannelExtendportAssign">
+		DELETE FROM t_sms_channel_extendport_assign WHERE channelid = #{channelId}
+	</delete>
+	
+	<delete id="updateChannelKeywordStatus">
+		UPDATE t_sms_channel_keyword_list SET status = 7 WHERE cid = #{channelId}
+	</delete>
+	
+	<delete id="deleteChannelBlackList">
+		DELETE FROM t_sms_channel_black_list WHERE cid = #{channelId}
+	</delete>
+	
+	<select id="queryChannelMqId" resultType="string">
+		SELECT mq_id FROM t_sms_channel WHERE cid = #{channelId}
+	</select>
+	
+	<update id="updateChannelMqId">
+		UPDATE t_sms_channel SET mq_id = #{mqId} WHERE cid = #{channelId}
+	</update>
+	
+	<delete id="deleteMqRelationRef">
+		DELETE FROM t_sms_component_ref_mq WHERE mq_id = #{mqId}
+	</delete>
+	
+</mapper> 

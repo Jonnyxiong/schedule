@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-免审白名单管理 -->
+<mapper namespace="noauditKeyword">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="keyword != null">
+				t.keyword LIKE concat('%',#{keyword}, '%')
+			</if>
+			<if test="clientid != null">
+				AND t.clientid LIKE concat('%',#{clientid}, '%')
+			</if>
+			<if test="status != null and status != 0">
+				AND t.status = #{status}
+			</if>
+		</where>
+	</sql>
+
+	<select id="query" resultType="map">
+		SELECT 
+		t.id , 
+		t.clientid , 
+		GROUP_CONCAT(t.keyword SEPARATOR '') AS keyword,
+		t.remarks , 
+		t.status ,
+		t.createtime 
+		from t_sms_user_noaudit_keyword t 
+		<include refid="queryCommon"/>
+		GROUP BY clientid
+		ORDER BY t.createtime DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT COUNT(1) AS totalCount FROM (
+		SELECT 
+		DISTINCT(t.clientid)
+		from t_sms_user_noaudit_keyword t 
+		<include refid="queryCommon"/>
+		GROUP BY t.clientid
+		)t1
+	</select>
+	
+	<select id="getKeywordsByClientId" resultType="string">
+		SELECT
+			keyword AS keyword
+		FROM
+			t_sms_user_noaudit_keyword
+		WHERE
+			clientid = #{clientid}		
+	</select>	
+	
+	<select id="view" resultType="map">
+		SELECT 
+		t.id , 
+		t.clientid , 
+		t.keyword , 
+		t.remarks , 
+		t.status ,
+		t.createtime 
+		from t_sms_user_noaudit_keyword t where t.clientid = #{clientid}
+	</select>
+	
+	<delete id="delete">
+		delete from t_sms_user_noaudit_keyword where clientid = #{clientid}
+	</delete>
+	
+	<!-- 查重 -->
+	<select id="repeatCheck" resultType="map">
+		SELECT clientid , keyword FROM t_sms_user_noaudit_keyword 
+		WHERE clientid = #{clientid} LIMIT 1
+	</select>
+	
+	<insert id="insert" >
+		INSERT INTO t_sms_user_noaudit_keyword (
+			clientid , 
+			keyword , 
+			remarks , 
+			status ,
+			createtime 
+		) VALUES(
+			#{clientid} , 
+			#{keyword} , 
+			#{remarks} , 
+			1 ,
+			NOW() 
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE `t_sms_user_noaudit_keyword` SET  
+		`clientid`= #{clientid}, 
+		`keyword`= #{keyword}, 
+		`remarks`= #{remarks}, 
+		`createtime`= NOW() 
+		WHERE `id`= #{id};
+	</update>
+	
+	<update id="updateStatus" >
+		UPDATE `t_sms_user_noaudit_keyword` SET  
+		`status`= #{status},
+		`createtime`= NOW() 
+		WHERE `clientid`= #{clientid};
+	</update>
+</mapper> 

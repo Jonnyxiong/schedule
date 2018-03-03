@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 信息管理-管理员中心 -->
+<mapper namespace="admin">
+
+	<!-- 获取管理员资料 -->
+	<select id="getAdmin" resultType="map">
+		SELECT
+			a.id,
+			a.sid,
+			a.email,
+			a.mobile,
+			a.realname,
+			a.web_id,
+			c.id as role_id,
+			c.role_name
+		FROM
+			t_sms_user a,
+			t_sms_user_role b,
+			t_sms_role c
+		WHERE
+			a.id = b.user_id
+		AND a.web_id = 1
+		AND c.web_id = 1
+		AND b.role_id = c.id
+		AND a.user_type = 1
+		AND a.id = #{id}
+	</select>
+	
+	<!-- 添加、修改管理员之前查重 -->
+	<select id="checkAdmin" resultType="map">
+		SELECT
+			u.email,
+			u.mobile
+		FROM
+			t_sms_user u
+		WHERE
+			u.user_type = 1
+		AND (u.email = #{email} OR u.mobile = #{mobile})
+		AND u.web_id = 1
+		<if test="id != null">
+			AND u.id != #{id}
+		</if>
+		limit 1
+	</select>
+	
+	<!-- 修改管理员资料 -->
+	<update id="updateAdmin">
+		UPDATE t_sms_user a
+		SET a.email = #{email},
+			a.realname = #{realname},
+			a.mobile = #{mobile},
+			<if test="password != null">
+				a.password = #{password},
+			</if>
+			a.update_date = now()
+		WHERE
+			a.user_type = 1
+		AND a.id = #{id}
+	</update>
+	
+	<!-- 修改密码 -->
+	<update id="savePassword">
+		UPDATE t_sms_user a
+		SET a.`password` = #{newPassword},
+		 a.update_date = now()
+		WHERE
+			a.user_type = 1
+		AND a.id = #{id}
+		AND a.`password` = #{password}
+	</update>
+	
+	<!-- 分页查询管理员 -->
+	<select id="query" resultType="map">
+		SELECT
+			u.id,
+			u.sid,
+			u.email,
+			u.mobile,
+			r.id AS role_id,
+			r.role_name,
+			u.realname,
+			date_format(
+				u.create_date,
+				'%Y-%m-%d %H:%i:%S'
+			) AS create_date,
+			u.`status`,
+			u.`web_id`
+		FROM
+			t_sms_user u,
+			t_sms_user_role ur,
+			t_sms_role r
+		<include refid="queryCommon"/>
+		
+		ORDER BY
+			u.id ASC
+		${limit}
+	</select>
+	
+	<!-- 分页查询管理员 记录总数 -->
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_user u,
+			t_sms_user_role ur,
+			t_sms_role r
+		<include refid="queryCommon"/>
+		
+	</select>
+	
+	<sql id="queryCommon">
+		<where>
+			u.id = ur.user_id
+			AND ur.role_id = r.id
+			AND u.user_type = 1
+<!-- 			AND u.`status` = 1 -->
+			AND u.web_id = 1 <!-- 只显示调度系统相关的管理员信息 -->
+			AND r.web_id = 1
+			<if test="text != null">
+				AND (
+					u.sid LIKE concat('%', #{text}, '%')
+					OR u.email LIKE concat('%', #{text}, '%')
+					OR u.mobile LIKE concat('%', #{text}, '%')
+					OR u.realname LIKE concat('%', #{text}, '%')
+				)
+			</if>
+			<if test="role_id != null">
+				AND r.id = #{role_id}
+			</if>
+
+		</where>
+	</sql>
+	
+	<!-- 添加管理员 -->
+	<insert id="insertAdmin" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO t_sms_user (
+			sid,
+			email,
+			realname,
+			mobile,
+			PASSWORD,
+			user_type,
+			create_date,
+			update_date,
+			STATUS,
+			web_id
+		)
+		VALUES
+			(#{sid}, #{email}, #{realname}, #{mobile}, #{password}, 1, now(),now(), 1, 1)
+	</insert>
+	
+	<!-- 添加管理员角色 -->
+	<insert id="insertAdminRole">
+		INSERT INTO t_sms_user_role (user_id, role_id)
+		VALUES
+			(#{user_id}, #{role_id})
+	</insert>
+	
+	<!-- 修改管理员角色 -->
+	<update id="updateAdminRole">
+		UPDATE t_sms_user_role r
+		SET r.role_id = #{role_id}
+		WHERE
+			r.user_id = #{user_id}
+	</update>
+	
+	<!-- 修改管理员状态 -->
+	<update id="updateStatus">
+		UPDATE t_sms_user u
+		SET u.`status` = #{status}
+		WHERE u.id = #{id}
+	</update>
+	
+	<!-- 删除管理员 -->
+	<delete id="deleteUser">
+		DELETE u, ur
+		FROM
+			t_sms_user u
+		LEFT JOIN t_sms_user_role ur ON u.id = ur.user_id
+		WHERE
+			u.id = #{id}
+	</delete>
+	
+	<!-- 发送短信验证码之前对手机号码查重 -->
+	<select id="checkMobile" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_user u
+		WHERE
+			u.user_type = 1
+		AND u.mobile = #{mobile}
+	</select>
+	
+	<select id="getWebIdByRoleId" resultType="map">
+		SELECT 
+			web_id
+		FROM 
+			t_sms_role
+		WHERE 
+			id = #{id}
+	</select>
+	
+	
+	
+	
+	
+	
+	
+</mapper> 

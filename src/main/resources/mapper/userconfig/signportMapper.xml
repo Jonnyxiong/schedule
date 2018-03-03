@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户短信通道管理-用户帐号和签名端口对应关系 -->
+<mapper namespace="signport">
+	<select id="query" resultType="map">
+		SELECT 
+		 id,
+		 clientid,
+		 sign,
+		 signport,
+		 status,
+		 date_format(
+				updatedate,
+				'%Y-%m-%d %H:%i:%S'
+		  ) AS updatedate
+		  FROM
+         t_sms_clientid_signport 
+		where 1=1
+		<if test="clientid != null">
+			and clientid = #{clientid}
+		</if>
+		<if test="sign != null">
+			and sign LIKE CONCAT('%', #{sign}, '%')
+		</if>
+		<if test="signport != null">
+			and signport = #{signport}
+		</if>
+<!-- 		AND status = 0  -->
+		order by updatedate desc
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT 
+		 	count(0) AS totalCount
+		FROM
+         t_sms_clientid_signport 
+		where 1=1
+		<if test="clientid != null">
+			and clientid = #{clientid}
+		</if>
+		<if test="sign != null">
+			and sign LIKE CONCAT('%', #{sign}, '%')
+		</if>
+		<if test="signport != null">
+			and signport = #{signport}
+		</if>
+<!-- 		AND status = 0  -->
+	</select>
+
+	<select id="view" resultType="map">
+		SELECT 
+		 id,
+		 clientid,
+		 sign,
+		 signport,
+		 status,
+		 updatedate 
+		  FROM
+         t_sms_clientid_signport WHERE id=#{id}
+	</select>
+	
+	<select id="saveCheck" resultType="map">
+		SELECT clientid AS clientid
+		FROM
+			t_sms_clientid_signport
+		WHERE
+			clientid = #{clientid}
+		AND sign = #{sign}
+		<if test="id != null and id != ''">
+			AND id != #{id}
+		</if>
+	</select>
+
+	<insert id="insert">
+		INSERT INTO t_sms_clientid_signport (
+		  id,
+		  clientid,
+		  sign,
+		  signport,
+		  status,
+		  updatedate
+		) 
+		VALUES
+		  (
+		    #{id},
+		    LOWER(#{clientid}),
+		    #{sign},
+		    #{signport},
+		    0,
+		   	now()
+		  ) 
+	</insert>
+	
+	<insert id="insertSignPortAssign">
+		INSERT INTO t_sms_clientid_signport_assign (
+			clientid,
+			startnumber,
+			endnumber,
+			currentnumber,
+			status,
+			remark,
+			updatetime
+		)
+		VALUE
+		(
+			LOWER(#{clientid}),
+			#{startnumber},
+			#{endnumber},
+			#{currentnumber2},
+			0,
+			"",
+			NOW()
+		)
+	</insert>
+	
+	<update id="updateSignPortAssign">
+		UPDATE t_sms_clientid_signport_assign
+			SET currentnumber = #{currentnumber2},
+		 		updatetime = NOW()
+		WHERE
+			clientid = #{clientid}
+	</update>
+	
+	<!-- 修改用户帐号和签名端口对应关系  -->
+	<update id="update">
+		UPDATE 
+		  t_sms_clientid_signport 
+		SET
+		  clientid = LOWER(#{clientid}),
+		  sign = #{sign},
+		  updatedate = now()
+		WHERE id = #{id} ;
+	</update>
+	
+	<update id="updateStatus">
+		UPDATE t_sms_clientid_signport
+		SET status = #{status},
+		 	updatedate = NOW()
+		WHERE id = #{id}
+	</update>
+	
+	<!-- 删除用户帐号和签名端口对应关系 -->
+	<delete id="delete">
+		DELETE FROM t_sms_clientid_signport WHERE id = #{id}
+	</delete>
+	
+	<!-- 查询子账号状态 -->
+	<select id="getAccountStatus" resultType="map">
+		SELECT status FROM t_sms_account WHERE clientid = #{clientid}
+	</select>
+
+	
+	<select id="getClientIdSignPort" resultType="map">
+		SELECT
+			startnumber,
+			endnumber,
+			currentnumber
+		FROM
+			t_sms_clientid_signport_assign
+		WHERE
+			clientid = #{clientid};
+	</select>
+	
+	
+	<select id="getClientIdSignPortLength" resultType="map">
+		SELECT signportlen FROM t_sms_account WHERE clientid = #{clientid};
+	</select>
+</mapper> 

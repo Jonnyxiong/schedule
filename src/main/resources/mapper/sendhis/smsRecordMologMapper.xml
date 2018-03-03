@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-系统参数 -->
+<mapper namespace="smsRecordMolog">
+	<select id="query" resultType="map">
+		SELECT
+			b.moid,
+			b.channelid,
+			b.receivedate,
+			b.phone,
+			b.tophone,
+			b.content,
+			b.channelsmsid,
+			b.clientid,
+			b.mofee,
+			b.chargetotal,
+			b.paytime
+		FROM
+			t_sms_record_molog b
+		<where>
+			<if test="channelid !=null ">
+				AND b.channelid = #{channelid}
+			</if>
+			<if test="start_time !=null">
+				<![CDATA[AND b.receivedate > #{start_time}]]>
+			</if>
+			<if test="end_time !=null">
+				<![CDATA[AND b.receivedate < #{end_time}]]>
+			</if>
+			<if test="phone !=null ">
+				AND b.phone = #{phone}
+			</if>
+			<if test="tophone !=null ">
+				AND b.tophone = #{tophone}
+			</if>
+			<if test="content !=null ">
+				AND b.content LIKE concat('%',#{content}, '%')
+			</if>
+			<if test="channelsmsid !=null ">
+				AND b.channelsmsid = #{channelsmsid}
+			</if>
+			<if test="clientid !=null ">
+				AND b.clientid = #{clientid}
+			</if>
+		</where>
+		ORDER BY
+			b.receivedate DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(1) AS totalCount
+		FROM
+			t_sms_record_molog b
+		<where>
+			<if test="channelid !=null ">
+				AND b.channelid = #{channelid}
+			</if>
+			<if test="start_time !=null">
+				<![CDATA[AND b.receivedate > #{start_time}]]>
+			</if>
+			<if test="end_time !=null">
+				<![CDATA[AND b.receivedate < #{end_time}]]>
+			</if>
+			<if test="phone !=null ">
+				AND b.phone = #{phone}
+			</if>
+			<if test="tophone !=null ">
+				AND b.tophone = #{tophone}
+			</if>
+			<if test="content !=null ">
+				AND b.content LIKE concat('%',#{content}, '%')
+			</if>
+			<if test="channelsmsid !=null ">
+				AND b.channelsmsid = #{channelsmsid}
+			</if>
+			<if test="clientid !=null ">
+				AND b.clientid = #{clientid}
+			</if>
+		</where>
+	</select>
+</mapper> 

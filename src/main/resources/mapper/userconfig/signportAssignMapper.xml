@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户配置-签名端口分配范围表  -->
+<mapper namespace="signportAssign">
+
+	<select id="query" resultType="map">
+		SELECT 
+		  clientid,
+		  startnumber,
+		  endnumber,
+		  currentnumber,
+		  status,
+		  remark,
+		  date_format(
+				updatetime,
+				'%Y-%m-%d %H:%i:%S'
+		  ) AS updatetime
+		FROM
+  		  t_sms_clientid_signport_assign 
+		where 1=1
+		<if test="clientid != null">
+			and clientid = #{clientid}
+		</if>
+		<if test="status != null">
+			and status= #{status}
+		</if>
+		order by updatetime desc
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT 
+		  count(0) AS totalCount
+		FROM
+  		  t_sms_clientid_signport_assign 
+		where 1=1
+		<if test="clientid != null">
+			and clientid = #{clientid}
+		</if>
+		<if test="status != null">
+			and status= #{status}
+		</if>
+	</select>
+
+</mapper> 

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户配置-用户端口分配范围表 -->
+<mapper namespace="extendportAssign">
+
+	<select id="query" resultType="map">
+		SELECT 
+		  extendtype,
+		  extendname,
+		  startnumber,
+		  endnumber,
+		  currentnumber,
+		  reusenumber,
+		  status,
+		  remark,
+		  date_format(
+				updatetime,
+				'%Y-%m-%d %H:%i:%S'
+		  ) AS updatetime
+		FROM
+  		t_sms_extendport_assign 
+		order by extendtype asc
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+  		t_sms_extendport_assign 
+	</select>
+
+</mapper> 

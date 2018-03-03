@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-超频白名单管理 -->
+<mapper namespace="overrateUserList">
+	<select id="query" resultType="map">
+		SELECT 
+		  t.id,
+		  t.clientid,
+		  t.remarks,
+		  t.createtime 
+		FROM
+		  t_sms_overrate_user_list t  
+		<where>
+			<if test="clientid != null">
+				AND t.clientid = #{clientid}
+			</if>
+		</where>
+		ORDER BY t.createtime DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT 
+		count(1) as totalCount
+		from t_sms_overrate_user_list t 
+		<where>
+			<if test="clientid != null">
+				AND t.clientid = #{clientid}
+			</if>
+		</where>
+	</select>
+	
+	
+	<select id="view" resultType="map">
+		SELECT 
+		  id,
+		  clientid,
+		  remarks,
+		  createtime 
+		FROM
+		  t_sms_overrate_user_list WHERE id = #{id}
+
+	</select>
+	
+	<delete id="delete">
+		delete from t_sms_overrate_user_list where id = #{id}
+	</delete>
+	
+	<!-- 查重 -->
+	<select id="repeatCheck" resultType="map">
+		select clientid from t_sms_overrate_user_list 
+		where clientid = #{clientid} LIMIT 1
+	</select>
+	
+	<insert id="insert" >
+		INSERT INTO t_sms_overrate_user_list (
+		  clientid,
+		  remarks,
+		  createtime
+		) 
+		VALUES
+		  (
+		    #{clientid},
+		    #{remarks},
+		    NOW()
+		  ) 
+	</insert>
+	
+	<update id="update">
+		UPDATE 
+		  t_sms_overrate_user_list 
+		SET
+		  clientid = #{clientid},
+		  remarks = #{remarks},
+		  createtime = NOW()
+		WHERE id = #{id} ;
+	</update>
+</mapper> 

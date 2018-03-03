@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:mybatis="http://mybatis.org/schema/mybatis-spring"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+  		http://mybatis.org/schema/mybatis-spring
+  		http://mybatis.org/schema/mybatis-spring.xsd
+        ">
+
+	<!-- ucpaas_message_access 从库 连接配置 START-->
+	<bean id="access_slave_dataSource" parent="dataSourceParent">
+		<property name="url" value="${access_slave.jdbc.url}" />
+		<property name="username" value="${access_slave.jdbc.username}" />
+		<property name="password" value="${access_slave.jdbc.password}" />
+	</bean>
+	<!-- 配置mybitasSqlSessionFactoryBean -->
+	<bean id="access_slave_sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="access_slave_dataSource" />
+		<property name="configLocation" value="classpath:mybatis.xml" />
+		<property name="mapperLocations" value="classpath*:mapper/**/*Mapper.xml" />
+	</bean>
+	<!-- 配置SqlSessionTemplate -->
+	<bean id="access_slave_sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg name="sqlSessionFactory" ref="access_slave_sqlSessionFactory" />
+	</bean>
+	<!-- 事务配置 -->
+	<bean id="access_slave_transactionManager"
+		  class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="access_slave_dataSource" />
+	</bean>
+	<!-- 使用annotation注解方式配置事务 -->
+	<tx:annotation-driven transaction-manager="access_slave_transactionManager" />
+	<!-- ucpaas_message_access 从库配置 END -->
+</beans>

@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 短信发送历史-短信发送历史 -->
+<mapper namespace="sendhis">
+	
+	<!-- 短信发送记录 -->
+	<select id="query" resultType="map">
+		SELECT
+			t.channelid,
+			t.operatorstype,
+			CASE t.operatorstype
+				WHEN 0 THEN '全网'
+				WHEN 1 THEN '移动'
+				WHEN 2 THEN '联通'
+				WHEN 3 THEN '电信'
+				WHEN 4 THEN '国际'
+			END AS operatorstype_name,
+			t.area,
+			(select t.`name` from t_sms_area t where t.area_id = t.area limit 1) AS area_name,
+			t.smsid,
+			t.clientid,
+			t.username,
+			t.content,
+			t.smscnt,
+			t.state,
+			CASE t.state
+				WHEN 0 THEN '未发送'
+				WHEN 1 THEN '提交成功'
+				WHEN 2 THEN '发送成功'
+				WHEN 3 THEN '明确成功'
+				WHEN 4 THEN '提交失败'
+				WHEN 5 THEN '发送失败'
+				WHEN 6 THEN '明确失败'
+			END AS state_name,
+			t.phone,
+			t.duration,
+			t.errorcode,
+			date_format(
+				t.date,
+				'%Y-%m-%d %H:%i:%S'
+			) AS date,
+			t.submit,
+			date_format(
+				t.submitdate,
+				'%Y-%m-%d %H:%i:%S'
+			) AS submitdate,
+			t.subret,
+			date_format(
+				t.subretdate,
+				'%Y-%m-%d %H:%i:%S'
+			) AS subretdate,
+			t.report,
+			date_format(
+				t.reportdate,
+				'%Y-%m-%d %H:%i:%S'
+			) AS reportdate,
+			CASE t.smsfrom
+				WHEN 0 THEN 'REST协议'
+				WHEN 1 THEN 'VMSP协议'
+				WHEN 2 THEN 'SMPP协议'
+				WHEN 3 THEN 'CMPP协议'
+				WHEN 4 THEN 'SGIP协议'
+				WHEN 5 THEN 'SMGP协议'
+				WHEN 6 THEN 'HTTPS协议'
+			END AS smsfrom,
+			t.showphone,
+			date_format(
+				t.recvreportdate,
+				'%Y-%m-%d %H:%i:%S'
+			) AS recvreportdate,
+			t.template_id,
+			t.channel_tempid,
+			t.temp_params
+			<!-- t.paytype,
+			CASE t.paytype
+				WHEN 0 THEN '预付费'
+				WHEN 1 THEN '后付费'
+			END AS paytype_name -->
+			
+		FROM
+			(
+				
+				<!-- 短信记录流水表（t_sms_record_yyyyMMdd） -->
+				<foreach collection="table_list" item="i" separator=" UNION ALL ">
+					SELECT
+						<choose>
+							<when test="c_channelid == 1">
+								r.channelid,
+							</when>
+							<otherwise>
+								'' AS channelid,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_operatorstype == 1">
+								r.operatorstype,
+							</when>
+							<otherwise>
+								'' AS operatorstype,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_area == 1">
+								r.area,
+							</when>
+							<otherwise>
+								'' AS area,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_smsid == 1">
+								r.smsid,
+							</when>
+							<otherwise>
+								'' AS smsid,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_username == 1">
+								r.username,
+							</when>
+							<otherwise>
+								'' AS username,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_content == 1">
+								r.content,
+							</when>
+							<otherwise>
+								'' AS content,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_smscnt == 1">
+								r.smscnt,
+							</when>
+							<otherwise>
+								'' AS smscnt,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_state == 1">
+								r.state,
+							</when>
+							<otherwise>
+								'' AS state,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_phone == 1">
+								r.phone,
+							</when>
+							<otherwise>
+								'' AS phone,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_duration == 1">
+								r.duration,
+							</when>
+							<otherwise>
+								'' AS duration,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_templatetype == 1">
+								r.templatetype,
+							</when>
+							<otherwise>
+								'' AS templatetype,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_errorcode == 1">
+								r.errorcode,
+							</when>
+							<otherwise>
+								'' AS errorcode,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_date == 1">
+								r.date,
+							</when>
+							<otherwise>
+								'' AS date,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_submit == 1">
+								r.submit,
+							</when>
+							<otherwise>
+								'' AS submit,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_submitdate == 1">
+								r.submitdate,
+							</when>
+							<otherwise>
+								'' AS submitdate,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_subret == 1">
+								r.subret,
+							</when>
+							<otherwise>
+								'' AS subret,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_subretdate == 1">
+								r.subretdate,
+							</when>
+							<otherwise>
+								'' AS subretdate,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_report == 1">
+								r.report,
+							</when>
+							<otherwise>
+								'' AS report,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_reportdate == 1">
+								r.reportdate,
+							</when>
+							<otherwise>
+								'' AS reportdate,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_smsfrom == 1">
+								r.smsfrom,
+							</when>
+							<otherwise>
+								'' AS smsfrom,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_clientid == 1">
+								r.clientid,
+							</when>
+							<otherwise>
+								'' AS clientid,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_recvreportdate == 1">
+								r.recvreportdate,
+							</when>
+							<otherwise>
+								'' AS recvreportdate,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_showphone == 1">
+								r.showphone,
+							</when>
+							<otherwise>
+								'' AS showphone,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_template_id == 1">
+								r.template_id,
+							</when>
+							<otherwise>
+								'' AS template_id,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_channel_tempid == 1">
+								r.channel_tempid,
+							</when>
+							<otherwise>
+								'' AS channel_tempid,
+							</otherwise>
+						</choose>
+						<choose>
+							<when test="c_temp_params == 1">
+								r.temp_params
+							</when>
+							<otherwise>
+								'' AS temp_params
+							</otherwise>
+						</choose>
+					FROM
+						${i} r
+					<include refid="search_segement" />
+				</foreach>
+				
+			) t
+		WHERE
+			t.date BETWEEN #{start_time}
+		AND #{end_time}
+		ORDER BY
+			t.date DESC
+		${limit}
+	</select>
+	
+	<!-- 短信发送记录 记录总数 -->
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			(
+				<!-- 短信记录流水表（t_sms_record_yyyyMMdd） -->
+				<foreach collection="table_list" item="i" separator=" UNION ALL ">
+					SELECT
+						r.date
+					FROM
+						${i} r
+					<include refid="search_segement" />
+				</foreach>
+				
+			) t
+		WHERE
+			t.date BETWEEN #{start_time}
+		AND #{end_time}
+	</select>
+	
+	<!-- 查询条件公共部分 -->
+	<sql id="search_segement">
+		<choose>
+			<when test="area_id == 0"><!-- 所有 -->
+				WHERE
+					1 = 1
+			</when>
+			<when test="area_id == -1"><!-- 其他 -->
+				WHERE
+					r.area = 0
+			</when>
+			<when test="area_id_pid == 0"><!-- 省 -->
+					, t_sms_area a
+				WHERE
+					a.area_id = r.area
+				AND a.parent_id = #{area_id}
+			</when>
+			<otherwise><!-- 市 -->
+				WHERE
+					r.area = #{area_id}
+			</otherwise>
+		</choose>
+		<if test="sid_clientid != null">
+			AND (
+				r.sid LIKE concat('%', #{sid_clientid}, '%')
+				OR
+				r.clientid LIKE concat('%', #{sid_clientid}, '%')
+			)
+		</if>
+		<if test="phone != null">
+			AND r.phone LIKE concat('%', #{phone}, '%')
+		</if>
+		<if test="content != null">
+			AND r.content LIKE concat('%', #{content}, '%')
+		</if>
+		<if test="smsid != null">
+			AND r.smsid LIKE concat('%', #{smsid}, '%')
+		</if>
+		<if test="sid != null">
+			AND r.sid LIKE concat('%', #{sid}, '%')
+		</if>
+		<if test="operatorstype != null">
+			AND r.operatorstype = #{operatorstype}
+		</if>
+		<if test="channelid != null">
+			AND r.channelid = #{channelid}
+		</if>
+		<if test="state != null">
+			AND r.state = #{state}
+		</if>
+		<if test="smscnt != null">
+			AND r.smscnt = #{smscnt}
+		</if>
+		<if test="errorcode != null">
+			AND r.errorcode LIKE concat('%', #{errorcode}, '%')
+		</if>
+		<if test="template_id != null">
+			AND r.template_id LIKE concat('%', #{template_id}, '%')
+		</if>
+		<choose>
+			<when test="duration == 0">
+				<![CDATA[AND r.duration >= 0 AND r.duration <=5]]>
+			</when>
+			<when test="duration == 1">
+				<![CDATA[AND r.duration >= 6 AND r.duration <=10]]>  
+			</when>
+			<when test="duration == 2">
+				<![CDATA[AND r.duration >= 11 AND r.duration <=15]]>  
+			</when>
+			<when test="duration == 3">
+				<![CDATA[AND r.duration >= 16 AND r.duration <=20]]>  
+			</when>
+			<when test="duration == 4">
+				<![CDATA[AND r.duration >= 21 AND r.duration <=30]]>  
+			</when>
+			<when test="duration == 5">
+				<![CDATA[AND r.duration >= 31 AND r.duration <=40]]>  
+			</when>
+			<when test="duration == 6">
+				<![CDATA[AND r.duration >= 41 AND r.duration <=60]]>  
+			</when>
+			<when test="duration == 7">
+				<![CDATA[AND r.duration >= 61]]>  
+			</when>
+		</choose>
+	</sql>
+	
+	<!-- 根据数据库名和表名查询表所有的字段 -->
+	<select id="getRecordTableSchema" resultType="map">
+		SELECT
+		    CONCAT("c_", COLUMN_NAME) AS COLUMN_NAME
+		FROM
+		    INFORMATION_SCHEMA.COLUMNS
+		WHERE
+		    table_name = #{table_name}
+		AND table_schema = #{record_database_name}
+	</select>
+
+	<!-- 查询当前数据库的数据库名称 -->
+	<select id="getCurrentDatabaseName" resultType="string">
+		SELECT database()
+	</select>
+	
+</mapper> 

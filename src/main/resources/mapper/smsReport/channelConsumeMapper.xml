@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 通道消耗统计报表-->
+<mapper namespace="channelConsume">
+	<!-- <sql id="queryCommon" >
+    	短信记录流水表（t_sms_record_yyyyMMdd）
+		<foreach collection="table_list" item="i" separator=" UNION ALL ">
+			SELECT
+				r.channelid AS channelid,
+				r.date AS date,
+				SUM(IF(r.state REGEXP '^1$|2|3|5|6', r.smscnt, 0)) AS sendTotal,
+				SUM(IF(r.state REGEXP '[3]', r.smscnt, 0)) AS successTotal,
+				SUM(IF(r.state REGEXP '[4]', r.smscnt, 0)) AS sumbmitFail,
+				SUM(IF(r.state REGEXP '[56]', r.smscnt, 0)) AS sendFail,
+				SUM(IF(r.state REGEXP '^1$|2', r.smscnt, 0)) AS undetermined
+			FROM ${i} r
+			WHERE 1=1
+			<if test="start_time != null">
+				<![CDATA[ 
+					AND r.date >= #{start_time}
+				 ]]> 
+			</if>
+			<if test="end_time != null">
+				<![CDATA[ 
+					AND r.date <= #{end_time}
+				 ]]> 
+			</if>
+			<if test="channelid != null">
+				AND r.channelid LIKE CONCAT('%',#{channelid},'%')
+			</if>
+			GROUP BY r.channelid
+		</foreach>
+  	</sql> -->
+  	
+	<sql id="queryCommon" >
+    	
+    	SELECT 
+    		ta.channelid,
+    		SUM(ta.sendTotal) as sendTotal,
+    		SUM(ta.successTotal) as successTotal,
+    		SUM(ta.sumbmitFail) as sumbmitFail,
+    		SUM(ta.sendFail) as sendFail,
+    		SUM(ta.undetermined) as undetermined
+    	FROM(
+			<foreach collection="table_list" item="i" separator=" UNION ALL ">
+				SELECT
+					r.channelid AS channelid,
+					r.date AS date,
+					SUM(IF(r.state REGEXP '^1$|2|3|5|6', r.smscnt, 0)) AS sendTotal,
+					SUM(IF(r.state REGEXP '[3]', r.smscnt, 0)) AS successTotal,
+					SUM(IF(r.state REGEXP '[4]', r.smscnt, 0)) AS sumbmitFail,
+					SUM(IF(r.state REGEXP '[56]', r.smscnt, 0)) AS sendFail,
+					SUM(IF(r.state REGEXP '^1$|2', r.smscnt, 0)) AS undetermined
+				FROM ${i} r
+				WHERE 1=1
+				<if test="start_time != null">
+					<![CDATA[ 
+						AND r.date >= #{start_time}
+					 ]]> 
+				</if>
+				<if test="end_time != null">
+					<![CDATA[ 
+						AND r.date <= #{end_time}
+					 ]]> 
+				</if>
+				<if test="channelid != null">
+					AND r.channelid LIKE CONCAT('%',#{channelid},'%')
+				</if>
+				GROUP BY r.channelid
+			</foreach>
+    	) ta
+    	GROUP BY ta.channelid
+		ORDER BY ta.sendTotal DESC
+  	</sql>
+  	
+  	
+  
+  <!-- <include refid="queryCommon"/> -->
+	<!-- 分页查询通道消耗记录 -->
+	<select id="query" resultType="map">
+		SELECT 
+			t.channelid, 
+		    t.sendTotal AS sendTotal,
+			t.successTotal AS successTotal,
+			t.sumbmitFail AS sumbmitFail,
+			t.sendFail AS sendFail,
+			t.undetermined AS undetermined,
+			CONCAT(ROUND(IF(t.sendTotal=0, 0, t.successTotal / t.sendTotal) * 100, 2), '%') AS successRate
+		FROM
+		(
+			<include refid="queryCommon"/>
+		) t
+		${limit}
+	</select>
+	
+	<!-- 分页查询通道消耗记录总数 -->
+	<select id="queryCount" resultType="map">
+		SELECT COUNT(1) AS totalCount
+		FROM
+		(
+			<include refid="queryCommon"/>
+		) t
+	</select>
+	
+	<!-- 查询所有通道记录的合计 -->
+	<select id="total" resultType="map">
+		SELECT SUM(t.sendTotal) AS sendTotal,
+			SUM(t.successTotal) AS successTotal,
+			SUM(t.sumbmitFail) AS sumbmitFail,
+			SUM(t.sendFail) AS sendFail,
+			SUM(t.undetermined) AS undetermined,
+			CONCAT(ROUND(IF(SUM(t.sendTotal)=0,0,SUM(t.successTotal) / SUM(t.sendTotal)) * 100, 2), '%') AS successRate
+		FROM (
+				<include refid="queryCommon"/>
+		) t
+	</select>
+	
+	<select id="queryChannelRemarkByChannelId" resultType="string">
+		SELECT remark FROM t_sms_channel WHERE cid = #{channelId}
+	</select>
+	
+</mapper> 

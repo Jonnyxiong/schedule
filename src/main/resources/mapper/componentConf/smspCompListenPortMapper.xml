@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 组件管理-SMSP组件监听端口配置 -->
+<mapper namespace="smspCompListenPort">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="component_type != null and component_type != -1">
+				component_type = #{component_type}
+			</if>
+			<if test="port_key">
+				AND
+				port_key LIKE CONCAT('%', #{port_key}, '%')
+			</if>
+		</where>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			`id`,
+			`port_key`,
+			`port_value`,
+			`component_type`,
+			date_format(
+				update_date,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_date
+		FROM
+			t_sms_listen_port_configure
+		<include refid="queryCommon"/>
+		ORDER BY component_type ASC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_listen_port_configure
+		<include refid="queryCommon"/>
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			`id`,
+			`port_key`,
+			`port_value`,
+			`component_type`,
+			`update_date`
+		FROM
+			t_sms_listen_port_configure
+		WHERE
+			id = #{id}
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO `t_sms_listen_port_configure` (
+			`id`,
+			`port_key`,
+			`port_value`,
+			`component_type`,
+			`update_date`
+		)
+		VALUES
+			(
+				NULL,
+				#{port_key},
+				#{port_value},
+				#{component_type},
+				NOW()
+			)
+	</insert>
+	
+	<select id="checkSave" resultType="int">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_listen_port_configure
+		WHERE
+			port_key = #{port_key}
+	</select>
+	
+	<update id="update">
+		UPDATE `t_sms_listen_port_configure`
+		SET 
+		 `port_key` = #{port_key},
+		 `port_value` = #{port_value},
+		 `component_type` = #{component_type},
+		 `update_date` = NOW()
+		WHERE
+			id = #{id}
+	</update>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_listen_port_configure` WHERE id = #{id}
+	</delete>
+	
+</mapper> 

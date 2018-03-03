@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 组件管理-MQ配置 -->
+<mapper namespace="mqConfig">
+
+	<sql id="queryCommon">
+		<where>
+			<foreach collection="middlewareIdList" item="i" separator=" OR ">
+					mq.middleware_id = #{i.middleware_id}
+			</foreach>
+			<if test="queue_name != null and queue_name != ''">
+				AND
+				mq.queue_name LIKE CONCAT('%', #{queue_name}, '%')
+			</if>
+			<if test="remark != null and remark != ''">
+				AND
+				mq.remark LIKE CONCAT('%', #{remark}, '%')
+			</if>
+		</where>
+	</sql>
+
+	<select id="query" resultType="map">
+		SELECT
+			mq.`mq_id`,
+			mq.`middleware_id`,
+			mid.`middleware_name`,
+			mq.`mq_queue`,
+			mq.`mq_exchange`,
+			mq.`mq_routingkey`,
+			mq.`queue_name`,
+			mq.`message_type`,
+			mq.`remark`,
+			date_format(
+				mq.`update_date`,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_date
+		FROM
+			t_sms_mq_configure mq
+		INNER JOIN t_sms_middleware_configure mid
+		ON mq.middleware_id = mid.middleware_id
+		<include refid="queryCommon"/>
+		ORDER BY mq_id ASC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_mq_configure mq
+		INNER JOIN t_sms_middleware_configure mid
+		ON mq.middleware_id = mid.middleware_id
+		<include refid="queryCommon"/>
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			`mq_id`,
+			`middleware_id`,
+			`mq_queue`,
+			`mq_exchange`,
+			`mq_routingkey`,
+			`queue_name`,
+			`message_type`,
+			`remark`,
+			`update_date`
+		FROM
+			t_sms_mq_configure
+		WHERE
+			mq_id = #{mq_id}
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="mq_id">
+		INSERT INTO `t_sms_mq_configure` (
+			`middleware_id`,
+			`mq_queue`,
+			`mq_exchange`,
+			`mq_routingkey`,
+			`queue_name`,
+			`message_type`,
+			`remark`,
+			`update_date`
+		)
+		VALUES
+			(
+				#{middleware_id},
+				#{mq_queue},
+				#{mq_exchange},
+				#{mq_routingkey},
+				#{queue_name},
+				#{message_type},
+				#{remark},
+				NOW()
+			)
+	</insert>
+	
+	<select id="checkSave" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_mq_configure
+		WHERE
+			mq_queue = #{mq_queue}
+	</select>
+	
+	<select id="checkExchange" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_mq_configure
+		WHERE
+			mq_exchange = #{mq_exchange}
+	</select>
+	
+	<select id="checkRoutingKey" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_mq_configure
+		WHERE
+			mq_routingkey = #{mq_routingkey}
+	</select>
+	
+	<update id="update">
+		UPDATE `t_sms_mq_configure`
+		SET 
+		 `middleware_id` = #{middleware_id},
+		 `mq_queue` = #{mq_queue},
+		 `mq_exchange` = #{mq_exchange},
+		 `mq_routingkey` = #{mq_routingkey},
+		 `queue_name` = #{queue_name},
+		 `message_type` = #{message_type},
+		 `remark` = #{remark},
+		 `update_date` = NOW()
+		WHERE
+			mq_id = #{mq_id}
+	</update>
+	
+	<select id="deleteCheck" resultType="int">
+		SELECT COUNT(1) FROM t_sms_component_ref_mq WHERE mq_id = #{mq_id};
+	</select>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_mq_configure` WHERE mq_id = #{mq_id}
+	</delete>
+	
+	<delete id="deleteByMiddlewareId">
+		DELETE FROM t_sms_mq_configure WHERE middleware_id = #{middleware_id}
+	</delete>
+	
+	<select id="queryMiddlewareIdByType" resultType="map">
+		SELECT middleware_id FROM t_sms_middleware_configure WHERE middleware_type = #{middleware_type}
+	</select>
+	
+	
+</mapper> 

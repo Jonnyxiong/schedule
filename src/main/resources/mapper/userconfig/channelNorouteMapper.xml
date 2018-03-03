@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户短信通道管理-通道错误状态关系 -->
+<mapper namespace="channelNoroute">
+
+	<sql id="search_sql">
+		<if test="start_time != null">
+			<![CDATA[AND DATE_FORMAT(time,'%Y%m%d') >= #{start_time}]]>
+		</if>
+		<if test="end_time != null">
+			<![CDATA[AND DATE_FORMAT(time,'%Y%m%d') <= #{end_time}]]>
+		</if>
+		<if test="query_sid != null">
+			AND sid LIKE CONCAT('%', #{query_sid}, '%')
+		</if>
+		<if test="status != null and status != -1">
+			 AND status = #{status}
+		</if>
+	</sql>
+	
+	
+	<select id="query" resultType="map">
+		SELECT id,
+		date_format(
+			time,
+			'%Y-%m-%d'
+		) AS time,
+		sid,
+		status FROM t_sms_sid_noroute_list 
+		where 1=1
+		<include refid="search_sql"/>
+		${limit}
+	</select>
+	
+	
+	<select id="queryCount" resultType="map">
+		SELECT count(0) AS totalCount FROM t_sms_sid_noroute_list 
+		where 1=1
+		<include refid="search_sql"/>
+	</select>
+
+	<!--修改时只修改当条的状态，其他字段不变  -->
+	<update id="updateStatus">
+		UPDATE t_sms_sid_noroute_list SET status = 1 WHERE sid = #{sid}
+	</update>
+	
+</mapper> 

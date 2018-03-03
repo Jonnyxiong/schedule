@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统设置-强制路由通道管理-->
+<mapper namespace="segmentChannel">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="channel_id != null and channel_id != ''">
+				sc.channel_id LIKE CONCAT('%', #{channel_id}, '%')
+			</if>
+			<if test="text != null and text !=''">
+				AND
+				(
+					sc.phone_segment LIKE CONCAT('%', #{text}, '%')
+					OR
+					sc.client_code LIKE CONCAT('%', #{text}, '%')
+				)
+			</if>
+			<if test="status != null and status != ''">
+				AND
+				sc.status = #{status}
+			</if>
+			<if test="area_id != null and area_id != ''">
+				AND
+				sc.area_id = #{area_id}
+			</if>
+			<if test="send_type != null and send_type != ''">
+				AND
+				sc.send_type = #{send_type}
+			</if>
+		</where>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			sc.`id`,
+			sc.`route_type`,
+			sc.`phone_segment`,
+			sc.`area_id`,
+			area.`area_name`,
+			sc.`channel_id`,
+			sc.`operatorstype`,
+			sc.`send_type`,
+			sc.`client_code`,
+			sc.`type`,
+			sc.`status`,
+			sc.`remarks`, 
+			DATE_FORMAT(
+				sc.update_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_time
+			FROM
+		t_sms_segment_channel sc
+		LEFT JOIN (
+			SELECT
+				`area_id`,
+				`name` AS area_name
+			FROM
+				t_sms_area
+			WHERE
+				parent_id = 0
+		) area
+		ON area.area_id = sc.area_id
+		<include refid="queryCommon" />
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(1) AS totalCount
+		FROM
+			t_sms_segment_channel sc
+		<include refid="queryCommon" />
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			sc.`id`,
+			sc.`route_type`,
+			sc.`phone_segment`,
+			sc.`area_id`,
+			sc.`channel_id`,
+			sc.`operatorstype`,
+			sc.`send_type`,
+			sc.`client_code`,
+			sc.`type`,
+			sc.`status`,
+			sc.`remarks`
+			FROM
+		t_sms_segment_channel sc
+		WHERE
+			sc.id = #{id}
+	</select>
+	
+	<select id="saveCheckRouteType0AndRouteType2" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_segment_channel
+		WHERE
+			phone_segment = #{phone_segment}
+		AND send_type=#{send_type}
+		AND channel_id=#{channel_id}
+		<if test="id != null and id !=''">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<select id="saveCheckRouteType1" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_segment_channel
+		WHERE
+			area_id = #{area_id}
+		AND operatorstype = #{operatorstype}
+		AND send_type=#{send_type}
+		AND channel_id=#{channel_id}
+		<if test="id != null and id !=''">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<select id="saveCheckRouteType3" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_segment_channel
+		WHERE
+			area_id = #{area_id}
+		AND operatorstype = #{operatorstype}
+		<if test="id != null and id !=''">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO `t_sms_segment_channel` (
+			`route_type`,
+			`phone_segment`,
+			`area_id`,
+			`channel_id`,
+			`operatorstype`,
+			`send_type`,
+			`client_code`,
+			`type`,
+			`status`,
+			`remarks`,
+			`update_time`
+		)
+		VALUES
+			(
+				#{route_type},
+				#{phone_segment},
+				#{area_id},
+				#{channel_id},
+				#{operatorstype},
+				#{send_type},
+				#{client_code},
+				#{type},
+				1,
+				#{remarks},
+				NOW()
+			)
+	</insert>
+	
+	<update id="update">
+		UPDATE `t_sms_segment_channel`
+		SET
+		    `route_type` = #{route_type},
+		    `phone_segment` = #{phone_segment},
+		    `area_id` = #{area_id},
+			`channel_id` = #{channel_id},
+			`operatorstype` = #{operatorstype},
+			`send_type` = #{send_type},
+			`client_code` = #{client_code},
+			`type` = #{type},
+			`remarks` = #{remarks},
+			`update_time` = NOW()
+		WHERE
+			id = #{id}
+	</update>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_segment_channel` WHERE id = #{id}
+	</delete>
+	
+	<update id="updateStatus">
+		UPDATE t_sms_segment_channel
+		SET `status` = #{status}
+		WHERE
+			id = #{id}
+	</update>
+	
+	<select id="queryOperatorstypeByChannelId" resultType="string">
+		SELECT operater FROM t_sms_channelgroup WHERE channelgroupid = #{channelId}
+	</select>
+	
+	
+	
+</mapper> 

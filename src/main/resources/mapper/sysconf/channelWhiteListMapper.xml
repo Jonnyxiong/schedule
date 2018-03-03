@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-通道白名单 -->
+<mapper namespace="channelWhiteList">
+	<select id="query" resultType="map">
+		SELECT
+			b.id,
+			b.cid,
+			b.phone,
+			b.remarks,
+			date_format(
+				b.createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM
+			t_sms_channel_white_list b
+		<where>
+			<if test="text != null">
+				b.phone LIKE concat('%',#{text}, '%')
+			</if>
+			<if test="channel_id !=null ">
+				AND b.cid = #{channel_id}
+			</if>
+			AND b.status = 1
+		</where>
+		ORDER BY
+			b.createtime DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(1) AS totalCount
+		FROM
+			t_sms_channel_white_list b
+		<where>
+			<if test="text != null">
+				b.phone LIKE concat('%',#{text}, '%')
+			</if>
+			<if test="channel_id !=null ">
+				AND b.cid = #{channel_id}
+			</if>
+			AND b.status = 1
+		</where>
+	</select>
+	
+	<select id="view" resultType="map">
+		SELECT
+			id,cid,phone,remarks
+		FROM t_sms_channel_white_list
+		WHERE id = #{id}
+	</select>
+	
+	<select id="whiteListCheck" resultType="map">
+		SELECT phone, status FROM t_sms_channel_white_list  WHERE phone = #{phone} AND cid = #{cid} and status = 1  LIMIT 1
+	</select>
+	
+	<update id="updateStatus">
+		UPDATE t_sms_channel_white_list
+		SET 
+			cid = #{cid},
+			phone = #{phone},
+			remarks = #{remarks},
+			status = '1',
+			createtime = NOW()
+		WHERE
+			cid = #{cid} AND phone = #{phone} AND status = '7'
+	</update>
+	
+	<delete id="delete">
+		delete from  t_sms_channel_white_list  WHERE id = #{id}
+	</delete>
+	
+	<insert id="insert">
+		INSERT INTO t_sms_channel_white_list (
+			cid,
+			phone,
+			status,
+			remarks,
+			createtime
+		)VALUES(
+			#{cid},
+			#{phone},
+			1, 
+			#{remarks},
+			now()
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE t_sms_channel_white_list
+		SET
+			cid = #{cid},
+			phone = #{phone},
+			remarks = #{remarks},
+			createtime = NOW()
+		WHERE id = #{id}
+	</update>
+	
+	<insert id="batchInsertWhiteList" parameterType="java.util.List">
+   	INSERT INTO t_sms_channel_white_list (
+		cid,
+		phone,
+		status,
+		remarks,
+		createtime
+	) VALUES
+    <foreach collection="list" item="item" index="index" separator="," >
+       (#{item.cid}, #{item.phone},1,#{item.remarks},now())
+    </foreach>
+  </insert> 
+  
+  <!-- 批量导入之前先锁定表，防止多点操作造成数据错误问题 -->
+  <select id="viewForLock" resultType="map">
+		SELECT
+			cid,phone
+		FROM t_sms_channel_white_list where status = 1 FOR UPDATE
+	</select>
+	
+	<insert id="insertKeyWord">
+		insert into t_sms_keyword_list(keyword,createtime) select #{val},now() FROM dual 
+		WHERE not exists (select 1 from t_sms_keyword_list t where t.keyword = #{val});
+	</insert>
+	
+	
+	<insert id="insertWhite">
+    INSERT INTO t_sms_channel_white_list(cid,phone,status,remarks,createtime)
+	SELECT #{cid},#{phone},1,#{remarks} ,NOW() FROM dual
+	WHERE NOT EXISTS(  
+      SELECT 1  
+      FROM t_sms_channel_white_list t 
+      WHERE t.cid = #{cid}  AND t.phone = #{phone} and status = 1) 
+	</insert>
+</mapper> 

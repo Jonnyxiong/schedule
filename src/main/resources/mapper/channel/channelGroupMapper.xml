@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户短信通道管理-通道组管理 -->
+<mapper namespace="channelGroup">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="text != null">
+				(
+					t2.channelgroupname LIKE CONCAT('%',#{text},'%')
+					OR
+					t2.channelgroupid LIKE CONCAT('%',#{text},'%')
+				)
+			</if>
+			<if test="channelid != null">
+				AND t2.channelid LIKE CONCAT('%',#{channelid},'%')
+			</if>
+		</where>
+		
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT * FROM
+		(
+			SELECT 
+				t.channelgroupid,
+				t.channelgroupname,
+				t.operater,
+				t.flag,
+				GROUP_CONCAT(t.channelid ORDER BY t.sort  separator ',') AS channelid,
+				GROUP_CONCAT(t.weight ORDER BY t.sort  separator ',') AS weight,
+				t.status,
+				t.remarks,
+				date_format(
+					t.update_date,
+					'%Y-%m-%d %H:%i:%S'
+				) AS update_date
+			FROM (
+				SELECT
+					g.channelgroupid,
+					g.channelgroupname,
+					g.operater,
+					g.flag,
+					g.status,
+					r.channelid,
+					r.weight,
+					g.remarks,
+					r.sort,
+					g.update_date
+				FROM
+					t_sms_channelgroup g
+				LEFT JOIN t_sms_channel_ref_channelgroup r ON g.channelgroupid = r.channelgroupid
+				ORDER BY r.sort
+			) t  
+			
+			GROUP BY channelgroupid ORDER BY t.update_date DESC
+		) t2
+		<include refid="queryCommon"/>
+		
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		
+		SELECT
+			count(0) AS totalCount
+		FROM (
+			SELECT * FROM
+			(
+				SELECT 
+					t.channelgroupid,
+					t.channelgroupname,
+					t.operater,
+					GROUP_CONCAT(t.channelid ORDER BY t.sort  separator ',') AS channelid,
+					GROUP_CONCAT(t.weight ORDER BY t.sort  separator ',') AS weight,
+					t.status,
+					t.remarks,
+					date_format(
+						t.update_date,
+						'%Y-%m-%d %H:%i:%S'
+					) AS update_date
+				FROM (
+					SELECT
+						g.channelgroupid,
+						g.channelgroupname,
+						g.operater,
+						g.status,
+						r.channelid,
+						r.weight,
+						g.remarks,
+						r.sort,
+						g.update_date
+					FROM
+						t_sms_channelgroup g
+					INNER JOIN t_sms_channel_ref_channelgroup r ON g.channelgroupid = r.channelgroupid
+					ORDER BY r.sort
+				) t  
+				GROUP BY channelgroupid ORDER BY t.update_date DESC
+			) t2
+			<include refid="queryCommon"/>
+		)t2
+	</select>
+
+	<!-- 查看短信通道 -->
+	<select id="view" resultType="map">
+		SELECT 
+			t.channelgroupid,
+			t.channelgroupname,
+			t.operater,
+			GROUP_CONCAT(concat_ws('|',t.channelid,ifNULL(t.weight,0)) ORDER BY t.sort  separator ',') AS channelid,
+			t.flag,
+			t.status,
+			t.remarks,
+			t.update_date
+		FROM (
+			SELECT
+				g.channelgroupid,
+				g.channelgroupname,
+				g.operater,
+				g.flag,
+				g.status,
+				r.channelid,
+				r.weight,
+				g.remarks,
+				r.sort,
+				g.update_date
+			FROM
+				t_sms_channelgroup g
+			LEFT JOIN t_sms_channel_ref_channelgroup r ON g.channelgroupid = r.channelgroupid
+			WHERE g.channelgroupid = #{channelgroupid} AND g.flag != 0
+			ORDER BY r.sort
+		)t ORDER BY t.update_date DESC
+	</select>
+
+	<select id="checkSave" resultType="map">
+		SELECT
+		  channelgroupid
+		FROM t_sms_channelgroup
+		WHERE channelgroupname = #{channelgroupname}
+		<if test="channelgroupid != null">
+			AND channelgroupid != #{channelgroupid}
+		</if>
+	</select>
+	
+	<!-- 添加通道组明细表信息 -->
+	<insert id="insertChannelGroup" keyProperty="channelgroupid" useGeneratedKeys="true">
+		INSERT INTO t_sms_channelgroup (
+			channelgroupid,
+			channelgroupname,
+			operater,
+			<if test="flag != null">
+				flag,
+			</if>
+			status,
+			remarks,
+			update_date
+		)
+		VALUES
+			(
+				NULL,
+				#{channelgroupname},
+				#{operatorstype},
+				<if test="flag != null">
+					#{flag},
+				</if>
+				1,
+				#{remarks},
+				NOW()
+			)
+	</insert>
+	
+	<!-- 添加通道组关系 -->
+	<insert id="insertChannelGroupRef">
+		INSERT INTO t_sms_channel_ref_channelgroup (
+			id,
+			channelid,
+			channelgroupid,
+			channelname,
+			sort,
+			weight,
+			update_date
+		)
+		VALUES
+			(
+				NULL,
+				#{channelid},
+				#{channelgroupid},
+				(SELECT channelname FROM t_sms_channel WHERE cid = #{channelid}),
+				#{sort},
+				#{weight},
+				NOW()
+			)
+	</insert>
+	
+	<!-- 修改通道组 -->
+	<update id="updateChannelGroup">
+		UPDATE t_sms_channelgroup
+		SET channelgroupname = #{channelgroupname},
+			<if test="flag != null">
+				flag = #{flag},
+			</if>
+			operater = #{operatorstype},
+			remarks = #{remarks},
+			update_date = NOW()
+		WHERE channelgroupid = #{channelgroupid}
+	</update>
+	
+	<!-- 更新通道组状态 -->
+	<update id="updateStatus">
+		update t_sms_channelgroup 
+		set
+		status = #{status},
+		update_date = now()
+		where channelgroupid = #{channelgroupid}
+	</update>
+	
+	<!-- 删除通道组（同时删除通道组明细表和关系表中的记录） -->
+	<delete id="delete">
+		DELETE g,r
+		FROM
+			t_sms_channelgroup g
+		INNER JOIN t_sms_channel_ref_channelgroup r ON g.channelgroupid = r.channelgroupid
+		WHERE
+			g.channelgroupid = #{channelgroupid}
+	</delete>
+	
+	<!-- 删除通道组关系 -->
+	<delete id="deleteChannelGroupRef">
+		DELETE FROM t_sms_channel_ref_channelgroup WHERE channelgroupid = #{channelgroupid}
+	</delete>
+	
+	<update id="updateChannelGroupRef">
+		UPDATE t_sms_channel_ref_channelgroup
+		SET
+		 channelid = #{channelid},
+		 channelname = (SELECT channelname FROM t_sms_channel WHERE cid = #{channelid}),
+		 weight = #{weight},
+		 sort = #{sort},
+		 update_date = NOW()
+		WHERE
+			channelgroupid = #{channelgroupid}
+	</update>
+	
+	<!-- 全组切换通道 -->
+	<update id="switchChannel">
+		UPDATE t_sms_channel_ref_channelgroup
+		SET channelid = #{switchChannelid} 
+		WHERE channelid = #{channelid}
+	</update>
+	
+	<select id="checkInuse" resultType="map">
+		SELECT COUNT(1) AS count FROM t_user_gw WHERE 
+		(channelid LIKE '%,${channelgroupid},%' OR channelid LIKE '%,${channelgroupid}' OR channelid = #{channelgroupid} OR channelid LIKE '%${channelgroupid},') OR
+		(ydchannelid LIKE '%,${channelgroupid},%' OR ydchannelid LIKE '%,${channelgroupid}' OR ydchannelid = #{channelgroupid} OR ydchannelid LIKE '%${channelgroupid},') OR
+		(ltchannelid LIKE '%,${channelgroupid},%' OR ltchannelid LIKE '%,${channelgroupid}' OR ltchannelid = #{channelgroupid} OR ltchannelid LIKE '%${channelgroupid},') OR
+		(dxchannelid LIKE '%,${channelgroupid},%' OR dxchannelid LIKE '%,${channelgroupid}' OR dxchannelid = #{channelgroupid} OR dxchannelid LIKE '%${channelgroupid},') OR
+		(gjchannelid LIKE '%,${channelgroupid},%' OR gjchannelid LIKE '%,${channelgroupid}' OR gjchannelid = #{channelgroupid} OR gjchannelid LIKE '%${channelgroupid},') OR
+		(xnydchannelid LIKE '%,${channelgroupid},%' OR xnydchannelid LIKE '%,${channelgroupid}' OR xnydchannelid = #{channelgroupid} OR xnydchannelid LIKE '%${channelgroupid},') OR
+		(xnltchannelid LIKE '%,${channelgroupid},%' OR xnltchannelid LIKE '%,${channelgroupid}' OR xnltchannelid = #{channelgroupid} OR xnltchannelid LIKE '%${channelgroupid},') OR
+		(xndxchannelid LIKE '%,${channelgroupid},%' OR xndxchannelid LIKE '%,${channelgroupid}' OR xndxchannelid = #{channelgroupid} OR xndxchannelid LIKE '%${channelgroupid},')
+	</select>
+	
+	
+	<!-- 按运营商查询通道 -->
+	<select id="queryChannelGroupByOperater" resultType="map">
+		select 
+		t.id AS value, 
+		CONVERT (
+			concat(
+				t.text,
+				'（',
+				state,
+				'）'
+			),
+			CHAR
+			) AS label
+		from 
+		(
+		SELECT
+			CASE state
+			WHEN 1 THEN '正常'
+			WHEN 0 THEN '关闭'
+			END AS state,			
+			CONVERT (cid, CHAR) AS id,
+			CONVERT (
+				concat(
+					cid,
+					'（',
+					channelname,
+					'）'
+				),
+				CHAR
+			) AS text
+		FROM
+			t_sms_channel
+		WHERE 1 = 1
+		<!-- 全网 -->
+		<if test="operatorstype == 0">
+			AND operatorstype = #{operatorstype}
+		</if>
+		<!-- 移动、联通、电信、国际 -->
+		<if test="operatorstype == 1 || operatorstype == 2 || operatorstype == 3 || operatorstype == 4">
+			AND operatorstype = #{operatorstype} OR operatorstype = 0
+		</if>
+		) t
+		ORDER BY
+			state DESC,
+			id
+			
+	</select>
+	
+</mapper> 

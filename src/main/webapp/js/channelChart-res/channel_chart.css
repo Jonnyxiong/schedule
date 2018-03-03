@@ -1,0 +1,112 @@
+@charset "UTF-8";
+.channel-box .ft-l{float:left;}
+.channel-box .ft-r{float:right;}
+.channel-box ul, li {margin:0;padding:0;}
+.channel-box p{margin:0}
+.channel-box .frame{min-width: 1060px;padding: 40px 20px;position: relative;}
+.channel-box .menu-box{height: 100%;position: relative;}
+.channel-box .first-menu{position: relative;}
+.channel-box .second-menu{position: relative;}
+.channel-box .name{
+	position: relative;
+	width: 110px;
+	height: 36px;
+	line-height: 36px;
+	padding: 4px 10px 4px 10px;
+	border:1px solid #ccc;
+	border-radius: 24px;
+	-webkit-border-radius: 24px;
+	-moz-border-radius: 24px;
+	border-width: 1px;
+	border-style: solid;
+}
+.channel-box .name .iconfont{font-size:26px;vertical-align: middle;margin-right:5px;line-height:36px;height:auto;width:28px;background:none;}
+.channel-box .first-menu .name,.channel-box .second-menu .name{line-height: 36px;}
+.channel-box .second-menu li{position: relative;}
+
+/* 三级 */
+.channel-box .content{position: relative;}
+.channel-box .content .name{width: 110px;padding-left:10px;}
+.channel-box .content .name .desp-box{float:left;width:70px;}
+.channel-box .content .name .desp-box p{line-height: 18px;overflow: hidden;text-overflow: ellipsis;white-space: nowrap; }
+.channel-box .content .name .iconfont{float:left;}
+.channel-box .first-menu .name i.after,.channel-box .second-menu i.after{
+	height: 1px;
+	position: absolute;
+	top: 50%;
+	left: 100%;
+	background-color: #0099ff;
+	z-index: 1;
+	animation: width .2s linear both;
+	width:31px;
+}
+.channel-box .second-menu .name i.before,.channel-box .content .name i.before{
+	height: 1px;
+	position: absolute;
+	top: 50%;
+	left: -32px;
+	z-index: 1;
+	background-color: #0099ff;
+	animation: width .2s linear both;
+	width:31px;
+}
+.channel-box .channel-status li.channel-list{width: 620px;padding: 15px 0;position: relative;}
+.line-v{width: 1px;position: absolute;top: 38px;right: 31px;z-index: 2;}
+.first-menu .line-v{background-color: #0099ff;}
+.second-menu .link1 .line-v{background-color: #009900;}
+.second-menu .link2 .line-v{background-color: #ff33cc;}
+.second-menu .link3 .line-v{background-color: #990033;}
+.channel-status .status-list ul{width: 480px;position: absolute;top: 30px;left: 140px;height: 16px;background-color: #cccccc;border-radius: 20px;-webkit-border-radius: 20px;-moz-border-radius: 20px;}
+.channel-status .status-list ul li{float: left;height: 16px;position: relative;cursor: pointer;}
+.channel-status .status-list ul li:first-child{
+	border-top-left-radius: 20px;
+	-webkit-border-top-left-radius: 20px;
+	-moz-border-top-left-radius: 20px;
+	border-bottom-left-radius: 20px;
+	-webkit-border-bottom-left-radius: 20px;
+	-moz-border-bottom-left-radius: 20px;
+}
+.channel-status .status-list ul li:last-child{
+	border-top-right-radius: 20px;
+	-webkit-border-top-right-radius: 20px;
+	-moz-border-top-right-radius: 20px;
+	border-bottom-right-radius: 20px;
+	-webkit-border-bottom-right-radius: 20px;
+	-moz-border-bottom-right-radius: 20px;
+}
+.channel-status .status-list ul li:hover .desp{visibility: visible;}
+.desp{
+	display: inline-block;
+	visibility: hidden;
+	max-width: 200px;
+	width:120px;
+	line-height: 18px;
+	font-size: 12px;
+	font-style: normal;
+	height: auto;
+	word-wrap: break-word;
+	position: absolute;
+	bottom: 28px;
+	left: 50%;
+	padding: 5px 10px;
+	background-color: #fff;
+	border: 1px solid #ADADAD;
+	border-radius: 3px;
+	-webkit-border-radius: 3px;
+	-moz-border-radius: 3px;
+	z-index: 4;
+	transform: translateX(-50%);-webkit-transform: translateX(-50%);-moz-transform: translateX(-50%);
+}
+.desp:before{content: "";width: 12px;height: 12px;position: absolute;bottom: -7px;left: 50%;margin-left: -6px;background-color: #fff;border: 1px solid #ADADAD;border-top-width: 0;border-left-width: 0;z-index: 3;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}
+.scale-v{position: absolute;left: 140px;top: 0;z-index: 3;}
+.scale-v .number{float: left;width: 20px;text-align: center;height: 20px;line-height: 20px;font-size: 12px;position: relative;left: 10px;}
+.scale-v .number .line{display: inline-block;width: 1px;background-color: #ADADAD;position: absolute;right: 10px;top: 20px;}
+
+@keyframes width{
+	0%{
+		width:0;
+	}
+	100% {
+		width:31px;
+	}
+}

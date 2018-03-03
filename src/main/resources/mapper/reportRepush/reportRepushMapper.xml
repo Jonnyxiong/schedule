@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 重推状态报告 -->
+<mapper namespace="reportRepush">
+
+	<sql id="queryCondition">
+		<where>
+			<if test="clientid != null and clientid != ''">
+				AND r.clientid = #{clientid}
+			</if>
+			<if test="phone != null and phone != ''">
+				AND r.phone LIKE concat('%', #{phone}, '%')
+			</if>
+			<if test="content != null and content != ''">
+				AND r.content LIKE concat('%', #{content}, '%')
+			</if>
+			<if test="channelid != null and channelid != ''">
+				AND r.channelid = #{channelid}
+			</if>
+			<if test="state != null and state != ''">
+				AND r.state = #{state}
+			</if>
+			<if test="operatorstype != null and operatorstype != ''">
+				AND r.operatorstype = #{operatorstype}
+			</if>
+			<if test="smsfrom != -1 and smsfrom != null">
+				AND r.smsfrom = #{smsfrom}
+			</if>
+			<if test="idList != null and idList.size > 0">
+				id IN
+				<foreach collection="idList" item="item" index="index"
+						 open="(" close=")" separator=",">
+					#{item}
+				</foreach>
+			</if>
+			AND r.date BETWEEN #{start_time} AND #{end_time}
+		</where>
+	</sql>
+
+	<!-- 查看重推状态报告数量 -->
+	<select id="queryRepushCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+		(
+		<!-- 客户发送历史记录流水表（t_sms_access_yyyyMMdd） -->
+		<foreach collection="table_list" item="i" separator=" UNION ALL ">
+			SELECT
+				r.date
+			FROM
+				${i} r
+			<include refid="queryCondition"/>
+		</foreach>
+		) t
+
+	</select>
+
+	<select id="queryAccessRepushRecordByIds" resultType="map">
+		SELECT
+			*
+		FROM
+		(
+		<!-- 客户发送历史记录流水表（t_sms_access_yyyyMMdd） -->
+		<foreach collection="table_list" item="i" separator=" UNION ALL ">
+			SELECT
+				*
+			FROM
+			${i} r
+		</foreach>
+		) t
+		<where>
+			id IN
+			<foreach collection="idList" item="item" index="index"
+					 open="(" close=")" separator=",">
+				#{item}
+			</foreach>
+		</where>
+
+	</select>
+
+
+	<select id="queryAccessRepushRecordByParams" resultType="map">
+		SELECT
+		*
+		FROM
+		(
+		<!-- 客户发送历史记录流水表（t_sms_access_yyyyMMdd） -->
+		<foreach collection="table_list" item="i" separator=" UNION ALL ">
+			SELECT
+			*
+			FROM
+			${i} r
+			<include refid="queryCondition"/>
+		</foreach>
+		) t
+
+		${limit}
+	</select>
+
+	<update id="updateAccessRepushStatus">
+		UPDATE ${tableName} SET repushCnt = repushCnt + 1 WHERE id = #{id}
+	</update>
+
+	<select id="queryWaitRepushNum" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+		(
+		<!-- 客户发送历史记录流水表（t_sms_access_yyyyMMdd） -->
+		<foreach collection="table_list" item="i" separator=" UNION ALL ">
+			SELECT
+			*
+			FROM
+			${i} r
+			<include refid="queryCondition"/>
+		</foreach>
+		) t
+		WHERE
+		t.repushCnt = 0
+	</select>
+
+</mapper> 

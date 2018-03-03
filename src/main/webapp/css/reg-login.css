@@ -1,0 +1,52 @@
+body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,input,button,textarea,select,p,blockquote,th,td,hr { margin: 0; padding: 0;color: #506470;}
+body { font-size: 14px; line-height: 1.5; font-family:"microsoft yahei"; background: #fff;}
+h1,h2,h3,h4,h5,h6 { font-family: arial,"hiragino sans gb","microsoft yahei","Simsun",sans-serif; font-size: 100%; font-weight:normal; font-family:"microsoft yahei";}
+i{font-style: normal;}
+input,textarea,select,button { font-size: 14px; font-weight: normal; vertical-align:middle;outline: none; font-family:   "微软雅黑";border-radius: 5px;-webkit-border-radius: 5px;-moz-border-radius: 5px;}
+input[type='button'],input[type='submit'],select,button { cursor: pointer;}
+input:-webkit-autofill {-webkit-box-shadow: 0 0 0px 1000px white inset;}
+table { border-spacing: 0;}
+li { list-style: none;}
+img { vertical-align: middle; vertical-align: middle; outline: none;}
+textarea { overflow-y:auto; }
+legend { color: #000;}
+a { text-decoration: none; outline: none; cursor: pointer;color: #506470;;}
+a:link,a:visited { text-decoration: none;}
+hr {height: 0;}
+.green { color: #2fb26a;}
+
+input[type='text'],input[type='password'] { font-size: 14px; font-family:  "微软雅黑"; outline: none; background-color: rgb(250,255,189); height: 38px; line-height: 38px; color: #ccc; padding-left: 12px; width: 288px; border:1px #ccc solid;}
+input[type='text']:focus,input[type='password']:focus { background: #fff; border-color: #67B83D; color: #333;}
+input[type='button'],input[type='submit'] { width: 100px; height: 38px; line-height: 38px; font-family:   "微软雅黑";  background: #2fb26a; text-align: center; border:none; color: #fff; font-size: 14px; border-radius: 5px; outline: none;}
+input[type='button']:hover,input[type='submit']:hover{background-color:#40C57C;}
+textarea {font-size: 14px; font-family:  "微软雅黑"; background: #f7f7f7; color: #ccc; padding-left: 12px; padding-top: 12px; min-height: 124px; /*width: 296px;*/ border:1px #ccc solid;}
+textarea:focus { background: #fff; border-color: #67B83D;}
+.error {color: #f00;font-size: 12px;display: inline-block; margin-left: 10px;}
+.clearfix:after,.clearfix:before{content:" ";display:block;height:0;clear:both;visibility:hidden;}
+.clearfix{zoom: 1;}
+
+body{background-color: #2E363F;}
+.wp{height: 100%;width: 100%;}
+.box{width: 400px;position: absolute;left: 50%;top: 50%;transform: translate(-50%,-50%);-webkit-transform: translate(-50%,-50%);-moz-transform: translate(-50%,-50%);}
+.box h1{color: #fff;font-size: 40px;text-align: center;margin-bottom: 30px;}
+.box .group{position: relative;margin-bottom: 25px;color: #fff;line-height: 38px;}
+.box .group label{color: #fff;display: inline-block;width: 25%;float: left;text-align: right;padding-right: 30px;box-sizing: border-box;-webkit-box-sizing: border-box;-moz-box-sizing: border-box;}
+.box .group input[type='text'],.box .group input[type='password']{width: 75%;float: left;box-sizing: border-box;-webkit-box-sizing: border-box;-moz-box-sizing: border-box;}
+.box .group input[name='validCode']{margin: 0 5% 0 25%;width: 35%;}
+.box .group input[type='button']{width: 35%;}
+.box .group .error{position: absolute;bottom: -17px;left: 25%;z-index: 1;line-height: 12px;}
+.box .btn{margin-left: 25%;width: 35%;}
+
+.box .logo{text-align: center;margin-bottom: 10px;}
+.box2 .group input[type='checkbox']{margin-left: 25%;}
+.box2 .btn{margin-left: 25%;}
+.box .group a{color: #fff;display: inline-block;float: right;}
+
+.box3{width: 500px;border-top: 1px solid rgba(255,255,255,0.1);border-bottom: 1px solid rgba(255,255,255,0.1);padding: 30px 0;}
+.box3 .group label{width: 35%;}
+.box3 .group input[type='text']{width: 65%;}
+.box3 .group input[name='validCode']{width: 35%;margin: 0 3% 0 35%;}
+.box3 .group .valid-img img{width: 134px;height: 36px;}
+/* .box3 input[type='submit']{margin-left: 35%;width: 25%;} */
+.box3 .btn{margin-left: 35%;}
+

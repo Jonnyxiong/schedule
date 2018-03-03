@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-通道关键字 -->
+<mapper namespace="channelKeywords">
+
+	<!-- 查询所有状态为“正常”的通道关键字 -->
+	<select id="query" resultType="map">
+		SELECT
+			t.id,
+			t.cid,
+<!-- 			GROUP_CONCAT(t.keyword ORDER BY id ASC SEPARATOR '') AS keyword, -->
+			t.keyword,
+			t.remarks,
+			t.status,
+			date_format(
+				t.createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM t_sms_channel_keyword_list t
+		<include refid="queryCommon"/>
+		GROUP BY
+			t.cid
+		ORDER BY
+			t.createtime DESC
+			
+		${limit}
+	</select>
+	
+	<!-- “正常”通道关键字总数 -->
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+		(
+			SELECT
+				*
+			FROM
+			(
+				SELECT 
+					cid,
+					GROUP_CONCAT(keyword ORDER BY id ASC SEPARATOR '') AS keyword,
+					status
+				FROM t_sms_channel_keyword_list
+				GROUP BY
+					cid
+			) t
+			<include refid="queryCommon"/>
+		) t2
+		
+		
+	</select>
+	
+	<sql id="queryCommon">
+		<where>
+			<if test="text != null">
+				t.keyword LIKE concat('%',#{text}, '%')
+			</if>
+			<if test="channel_id != null">
+				AND t.cid = #{channel_id}
+			</if>
+			<if test="status != null">
+				AND t.status = #{status}
+			</if>
+		</where>
+	</sql>
+	
+	<select id="view" resultType="map">
+		SELECT
+			id,cid,keyword,remarks,status
+		FROM t_sms_channel_keyword_list
+		WHERE cid = #{cid}
+	</select>
+	
+	<select id="getChannelKeywordsByCid" resultType="string">
+		SELECT
+			keyword AS keywords
+		FROM
+			t_sms_channel_keyword_list
+		WHERE
+			cid = #{cid}
+	</select>
+	
+	<!-- 用于更新时删除老的通道关键字 -->
+	<delete id="delete">
+		delete from t_sms_channel_keyword_list where cid = #{cid}
+	</delete>
+	
+	<!-- 软删除通道关键字 -->
+	<update id="updateStatus">
+		UPDATE t_sms_channel_keyword_list SET status = 7 WHERE cid = #{cid}
+	</update>
+	
+	<insert id="insert">
+		INSERT INTO t_sms_channel_keyword_list (
+			cid,
+			keyword,
+			remarks,
+			status,
+			createtime
+		) VALUES(
+			#{cid},
+			#{keyword},
+			#{remarks},
+			#{status},
+			now()
+		)
+	</insert>
+	
+	<update id="update">
+		UPDATE t_sms_channel_keyword_list
+		SET
+			cid = #{cid},
+			keyword = #{keyword},
+			remarks = #{remarks},
+			status = #{status},
+			createtime = NOW()
+		WHERE id = #{id}
+	</update>
+	
+	<insert id="batchInsertKeyWord" parameterType="java.util.List">
+   	INSERT INTO t_sms_channel_keyword_list (
+		cid,
+		keyword,
+		remarks,
+		status,
+		createtime
+	) VALUES
+    <foreach collection="list" item="item" index="index" separator="," >
+       (#{item.cid}, #{item.keyword}, #{item.remarks},#{item.status},now())
+    </foreach>
+  </insert> 
+  
+  <!-- 批量导入之前先锁定表，防止多点操作造成数据错误问题 -->
+  <select id="viewForLock" resultType="map">
+		SELECT
+			cid
+		FROM t_sms_channel_keyword_list where status = 1 FOR UPDATE
+	</select>
+	
+	<select id="queryChannelKeywordByCid" resultType="map">
+		<!-- SELECT *
+		FROM `t_sms_channel_keyword_list` where cid = #{cid}   ORDER BY id DESC LIMIT 1 -->
+		SELECT
+			id,
+			cid,
+			keyword,
+			remarks,
+			status
+		FROM
+			t_sms_channel_keyword_list
+		WHERE
+			cid = #{cid}
+		ORDER BY id ASC
+	</select>
+	
+	<delete id="batchDelete">
+		DELETE FROM t_sms_channel_keyword_list WHERE id in 
+		<foreach item="id" collection="list" open="(" separator="," close=")">
+		#{id}
+		</foreach>
+	</delete>
+	
+	<select id="queryExportExcelData" resultType="map">
+		SELECT
+			cid,
+			keyword,
+			CASE `status`
+			WHEN 1 THEN
+				"正常"
+			WHEN 7 THEN
+				"禁用"
+			END AS `status`,
+			remarks
+		FROM
+			t_sms_channel_keyword_list
+		<include refid="queryCommon"/>
+	</select>
+</mapper> 

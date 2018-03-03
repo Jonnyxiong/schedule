@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 短信审核 -->
+<mapper namespace="smsAudit">
+	<!-- 查询状态为“未审核”、“转审”、“待审核人为自己”的记录 -->
+	<select id="audit" resultType="map">
+		SELECT
+			clientid,
+			auditid,
+			opt_remark,
+			REPLACE(REPLACE(content, CHAR(10), ''), CHAR(13), '') AS content,
+			smstype,
+			sign,
+			status,
+			sendnum,
+			transferperson,
+			date_format(
+				createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM
+			t_sms_audit
+		WHERE
+			removeflag = 0
+		AND status IN (0,3)
+		<if test="smsType != null and smsType != ''">
+			AND smstype = #{smsType}
+		</if>
+		AND (transferperson is NULL OR transferperson = '' OR transferperson = #{transferperson})
+		<if test="sms_audit_lock != null and sms_audit_lock.size() > 0">
+			AND auditid NOT IN
+			<foreach collection="sms_audit_lock" item="item" index="index"
+	            open="(" close=")" separator=",">
+	            #{item}
+	        </foreach>
+	    </if>
+		ORDER BY
+		    FIELD(smstype, 4, 0, 6, 7, 8, 5),
+			`status` DESC,
+			createtime ASC
+		<if test="limit != null and limit != ''">
+	    	LIMIT ${limit}
+		</if>
+		<if test="limit == null or limit == ''">
+			LIMIT 15
+		</if>
+	</select>
+	<select id="yzmNum" resultType="map">
+		SELECT
+			clientid,
+			auditid,
+			opt_remark,
+			content,
+			smstype,
+			sign,
+			status,
+			sendnum,
+			transferperson,
+			date_format(
+				createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM
+			t_sms_audit
+		WHERE
+			removeflag = 0
+		AND status IN (0,3)
+		<if test="smsType != null and smsType != ''">
+			AND smstype = #{smsType}
+		</if>
+		AND (content REGEXP "验证码|校验码|确认码")
+		AND (transferperson is NULL OR transferperson = '' OR transferperson = #{transferperson})
+		<if test="sms_audit_lock != null and sms_audit_lock.size() > 0">
+			AND auditid NOT IN
+			<foreach collection="sms_audit_lock" item="item" index="index"
+	            open="(" close=")" separator=",">
+	            #{item}
+	        </foreach>
+	    </if>
+		<include refid="queryCondition"/>
+		ORDER BY
+		    FIELD(smstype, 4, 0, 6, 7, 8, 5),
+			`status` DESC,
+			createtime ASC
+		<if test="limit != null and limit != ''">
+	    	LIMIT ${limit}
+		</if>
+		<if test="limit == null or limit == ''">
+			LIMIT 15
+		</if>
+	</select>
+	<select id="ordinaryNum" resultType="map">
+		SELECT
+			clientid,
+			auditid,
+			opt_remark,
+			content,
+			smstype,
+			sign,
+			status,
+			sendnum,
+			transferperson,
+			date_format(
+				createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM
+			t_sms_audit
+		<where>
+			removeflag = 0
+		AND status IN (0,3)
+		<if test="smsType != null and smsType != ''">
+			AND smstype = #{smsType}
+		</if>
+		AND (transferperson is NULL OR transferperson = '' OR transferperson = #{transferperson})
+		<if test="sms_audit_lock != null and sms_audit_lock.size() > 0">
+			AND auditid NOT IN
+			<foreach collection="sms_audit_lock" item="item" index="index"
+	            open="(" close=")" separator=",">
+	            #{item}
+	        </foreach>
+	    </if>
+		AND (content NOT REGEXP "验证码|校验码|确认码")
+
+		<if test="clientIds != null and clientIds.size() > 0">
+
+			AND clientid NOT IN
+			<foreach collection="clientIds" open="(" close=")" item="item" separator=",">
+				#{item}
+			</foreach>
+		</if>
+		<include refid="queryCondition"/>
+
+			ORDER BY
+		    FIELD(smstype, 4, 0, 6, 7, 8, 5),
+			`status` DESC,
+			createtime ASC
+		<if test="limit != null and limit != ''">
+	    	LIMIT ${limit}
+		</if>
+		<if test="limit == null or limit == ''">
+			LIMIT 15
+		</if>
+		</where>
+	</select>
+	<select id="majorNum" resultType="map">
+		SELECT
+			clientid,
+			auditid,
+			opt_remark,
+			/*REPLACE(REPLACE(content, CHAR(10), ''), CHAR(13), '') AS content,*/
+			content,
+			smstype,
+			sign,
+			status,
+			sendnum,
+			transferperson,
+			date_format(
+				createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM
+			t_sms_audit
+		WHERE
+			removeflag = 0
+		AND status IN (0,3)
+		<if test="smsType != null and smsType != ''">
+			AND smstype = #{smsType}
+		</if>
+		AND (transferperson is NULL OR transferperson = '' OR transferperson = #{transferperson})
+		<if test="sms_audit_lock != null and sms_audit_lock.size() > 0">
+			AND auditid NOT IN
+			<foreach collection="sms_audit_lock" item="item" index="index"
+	            open="(" close=")" separator=",">
+	            #{item}
+	        </foreach>
+	    </if>
+		AND clientid IN
+		<foreach collection="clientIds" open="(" close=")" item="item" separator=",">
+			#{item}
+		</foreach>
+		<include refid="queryCondition"/>
+		AND (content NOT REGEXP "验证码|校验码|确认码")
+		ORDER BY
+		    FIELD(smstype, 4, 0, 6, 7, 8, 5),
+			`status` DESC,
+			createtime ASC
+		<if test="limit != null and limit != ''">
+	    	LIMIT ${limit}
+		</if>
+		<if test="limit == null or limit == ''">
+			LIMIT 15
+		</if>
+	</select>
+
+	<sql id="queryCondition">
+		<if test="clientid != null and clientid != ''">
+			AND clientid LIKE CONCAT('%', #{clientid} ,'%')
+		</if>
+		<if test="auditid != null and auditid != ''">
+			AND auditid = #{auditid}
+		</if>
+		<if test="content != null and content != ''">
+			AND content LIKE CONCAT('%', #{content} ,'%')
+		</if>
+		<if test="sign != null and sign != ''">
+			AND sign LIKE CONCAT('%', #{sign} ,'%')
+		</if>
+		<if test="status != -1 and status != null">
+			AND status = #{status}
+		</if>
+		<if test="greaterNum != null and greaterNum != ''">
+			AND <![CDATA[ sendnum >= #{greaterNum} ]]>
+		</if>
+		<if test="lessNum != null and lessNum != ''">
+			AND <![CDATA[ sendnum <= #{lessNum} ]]>
+		</if>
+		<if test="start_time != null">
+			AND <![CDATA[ createtime >= #{start_time} ]]>
+		</if>
+		<if test="end_time != null">
+			AND <![CDATA[ createtime <= #{end_time} ]]>
+		</if>
+		<if test="smsType != null and smsType != ''">
+			AND smstype = #{smsType}
+		</if>
+		AND removeflag = 0
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			clientid,
+			auditid,
+			REPLACE(REPLACE(content, CHAR(10), ''), CHAR(13), '') AS content,
+			sign,
+			smstype,
+			status,
+			sendnum,
+			opt_remark,
+			transferperson,
+			(SELECT realname FROM t_sms_user WHERE id = a.transferperson) AS transferpersonName,
+			(SELECT realname FROM t_sms_user WHERE id = a.auditperson) AS auditperson,
+			date_format(
+				audittime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS audittime,
+			date_format(
+				createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM
+			t_sms_audit a
+		<where>
+			<include refid="queryCondition"/>
+		</where>
+		ORDER BY
+			FIELD(smstype, 4, 0, 6, 7, 8, 5),
+			`status` DESC,
+			createtime ASC
+	    ${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(0) AS totalCount
+		FROM
+			t_sms_audit
+		<where>
+			<include refid="queryCondition"/>
+		</where>
+		ORDER BY
+			STATUS DESC,
+			createtime ASC
+	</select>
+	
+	<update id="updateStatus">
+		UPDATE t_sms_audit
+		SET 
+		<if test="transferperson != null">
+			transferperson = #{transferperson},
+			transfertime = NOW(),
+		</if>
+		<if test="remark != null">
+			opt_remark = #{remark},
+		</if>
+		<if test="auditperson != null">
+			auditperson = #{auditperson},
+			audittime = NOW(),
+		</if>
+		status = #{status}
+		<where>
+			auditid IN
+			<foreach collection="releaseIdList" item="item" index="index"
+	            open="(" close=")" separator=",">
+	            #{item}
+	        </foreach>
+		    AND status = 0
+		</where>
+	</update>
+	
+	<!-- 查询短信审核超时时间 -->
+	<select id="getAuditExpireTime" resultType="map">
+		SELECT param_value as auditExpireTime FROM t_sms_param WHERE param_key = "AUDIT"
+	</select>
+	
+	<!-- 查询待审核数和审核记录中待发送数 -->
+	<select id="getNeedAuditNum" resultType="map">
+		SELECT
+			COUNT(1) AS auditNum,
+			IFNULL(SUM(sendnum),0) AS sendNum
+		FROM t_sms_audit WHERE status IN(0,3)
+	</select>
+
+	<!-- 重要客户 查询待审核数和审核记录中待发送数 -->
+	<select id="getYZMAuditNum" resultType="map">
+		SELECT
+			COUNT(1) AS yzmNum,
+			IFNULL(SUM(sendnum),0) AS yzmNumSending
+		FROM t_sms_audit WHERE status IN(0,3)
+		AND (content REGEXP "验证码|校验码|确认码")
+	</select>
+
+	<!-- 重要客户 查询待审核数和审核记录中待发送数 -->
+	<select id="getMojorAuditNum" resultType="map">
+		SELECT
+			COUNT(1) AS majorNum,
+			IFNULL(SUM(sendnum),0) AS majorNumSending
+		FROM t_sms_audit WHERE status IN(0,3)
+		AND (content  NOT REGEXP "验证码|校验码|确认码")
+			AND clientid IN
+		<foreach collection="clientIds" open="(" close=")" item="item" separator=",">
+			#{item}
+		</foreach>
+	</select>
+
+	<select id="getClientIdIsNeedAuditKeywords" resultType="java.lang.Integer">
+		SELECT 
+			IF(needaudit = 3, 1, 0) AS needAuditKeywords
+		FROM t_sms_account
+		WHERE clientid = #{clientid}
+	</select>
+	
+	<!-- 根据clientId查询审核关键字 -->
+	<select id="getAuditKeywordsByClientId" resultType="string">
+		SELECT
+			keyword AS keyword
+		FROM
+			t_sms_audit_keyword_list
+		WHERE
+			(clientid = #{clientid} OR clientid = "*")
+		AND type = 0
+	</select>
+
+	<select id="getKeywordsByKGroupIds" resultType="string">
+		SELECT
+			akl.keyword AS keyword
+		FROM
+			t_sms_audit_keyword_list akl
+		JOIN (
+			SELECT
+				akrc.category_id
+			FROM
+				t_sms_audit_kgroup_ref_category akrc
+			WHERE
+			akrc.kgroup_id IN
+			<foreach collection="list" item="item" open="(" separator="," close=")" >
+				#{item}
+			</foreach>
+		) t2 USING (category_id)
+	</select>
+
+	<update id="updateAuditExpired">
+		UPDATE t_sms_audit
+		SET removeflag = 2
+		WHERE
+			auditid = #{auditId}
+	</update>
+	
+	
+</mapper> 

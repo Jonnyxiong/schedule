@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户短信通道管理-通道错误状态关系 -->
+<mapper namespace="channelErrorDesc">
+
+    <sql id="queryCondition">
+        <where>
+            <if test="channelid != null">
+                channelid LIKE CONCAT('%', #{channelid}, '%')
+            </if>
+            <if test="errorcode != null">
+                AND errorcode LIKE CONCAT('%', #{errorcode}, '%')
+            </if>
+            <if test="type != null and type != ''">
+                AND type = #{type}
+            </if>
+        </where>
+    </sql>
+
+    <select id="query" resultType="map">
+        SELECT
+        id,
+        channelid,
+        type,
+        errorcode,
+        errordesc,
+        syscode,
+        date_format(
+        updatetime,
+        '%Y-%m-%d %H:%i:%S'
+        ) AS updatetime
+        FROM
+        t_sms_channel_error_desc
+        <include refid="queryCondition"/>
+        order by updatetime desc
+        ${limit}
+    </select>
+    <select id="queryCount" resultType="map">
+        SELECT
+        count(0) AS totalCount
+        FROM
+        t_sms_channel_error_desc
+        <include refid="queryCondition"/>
+    </select>
+
+    <!-- 查看通道错误 -->
+    <select id="view" resultType="map">
+        SELECT
+        *
+        FROM
+        t_sms_channel_error_desc
+        where id = #{id}
+    </select>
+
+    <select id="saveCheck" resultType="map">
+        SELECT count(1) AS totalCount
+        FROM
+        t_sms_channel_error_desc
+        WHERE
+        channelid = #{channelid}
+        AND type = #{type}
+        AND errorcode = #{errorcode}
+        <if test="id != null and id != ''">
+            AND id != #{id}
+        </if>
+    </select>
+
+    <!-- 添加通道错误 -->
+    <insert id="insert">
+        INSERT INTO t_sms_channel_error_desc (
+        id,
+        channelid,
+        type,
+        errorcode,
+        errordesc,
+        syscode,
+        updatetime
+        )
+        VALUES (
+        #{id},
+        #{channelid},
+        #{type},
+        #{errorcode},
+        #{errordesc},
+        #{syscode},
+        now()
+        )
+    </insert>
+
+    <!-- 修改通道错误 -->
+    <update id="update">
+        UPDATE t_sms_channel_error_desc
+        SET channelid = #{channelid},
+        type = #{type},
+        errorcode = #{errorcode},
+        errordesc = #{errordesc},
+        syscode = #{syscode},
+        updatetime = now()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除通道错误 -->
+    <delete id="delete">
+        DELETE FROM t_sms_channel_error_desc WHERE id = #{id}
+    </delete>
+</mapper>

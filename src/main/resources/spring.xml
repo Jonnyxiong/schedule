@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+   xmlns:task="http://www.springframework.org/schema/task"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	   	http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        ">
+
+	<!-- 采用注释的方式配置bean -->
+	<context:annotation-config />
+	<!-- 配置要扫描的包 -->
+	<context:component-scan base-package="com.ucpaas.sms" />
+	<context:component-scan base-package="com.jsmsframework"/>
+	<!--<aop:aspectj-autoproxy proxy-target-class="true"/>-->
+
+	<!-- 根据不同的运行环境加载配置文件 -->
+	<context:property-placeholder location="classpath:system.properties" />
+
+	<!-- dbcp2公共配置-->
+	<bean id="dataSourceParent" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close" abstract="true">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="initialSize" value="${jdbc.initialSize}" />		<!-- 初始化连接 -->
+		<property name="maxTotal" value="${jdbc.maxTotal}" />		<!-- 最大活动连接 -->
+		<property name="maxIdle" value="${jdbc.maxIdle}" />			<!-- 最大空闲连接 -->
+		<property name="minIdle" value="${jdbc.minIdle}" />			<!-- 最小空闲连接 -->
+		<property name="maxWaitMillis" value="${jdbc.maxWaitMillis}" />	<!-- 从池中取连接的最大等待时间，单位毫秒 -->
+		<property name="validationQuery" value="SELECT 1" />			<!-- 验证使用的SQL语句 -->
+		<property name="testWhileIdle" value="true" />					<!-- 指明连接是否被空闲连接回收器(如果有)进行检验.如果检测失败,则连接将被从池中去除 -->
+		<property name="testOnBorrow" value="false" />					<!-- 借出连接时不要测试，否则很影响性能 -->
+		<property name="timeBetweenEvictionRunsMillis" value="30000" />	<!-- 每30秒运行一次空闲连接回收器 -->
+		<property name="minEvictableIdleTimeMillis" value="1800000" />	<!-- 池中的连接空闲30分钟后被回收 -->
+		<property name="numTestsPerEvictionRun" value="3" />			<!-- 在每次空闲连接回收器线程(如果有)运行时检查的连接数量 -->
+		<property name="removeAbandonedOnBorrow" value="true" />		<!-- 连接泄漏回收参数，当可用连接数少于3个时才执行 -->
+		<property name="removeAbandonedTimeout" value="180" />			<!-- 连接泄漏回收参数，180秒，泄露的连接可以被删除的超时值 -->
+	</bean>
+
+	<!-- FreeMarker配置 -->
+	<bean id="freeMarkerConfiguration" class="org.springframework.ui.freemarker.FreeMarkerConfigurationFactoryBean">
+		<property name="templateLoaderPath" value="classpath:template" />
+	</bean>
+
+	<!-- 缓存参数 -->
+	<bean class="com.ucpaas.sms.util.UcpaasParamUtils" />
+	
+	<!-- 邮件配置 -->
+	<bean id="javaMailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+		<property name="host" value="smtp.exmail.qq.com" />
+		<property name="port" value="465" />
+		<property name="username" value="admin@ucpaas.com" />
+		<property name="password" value="Ucpaas.com@2014" />
+		<property name="javaMailProperties">
+			<props>
+<!-- 				<prop key="mail.transport.protocol">smtp</prop> -->
+				<prop key="mail.smtp.auth">true</prop>
+<!-- 				<prop key="mail.smtp.starttls.enable">true</prop> -->
+				<prop key="mail.smtp.timeout">25000</prop>
+<!-- 				<prop key="mail.debug">true</prop> -->
+				<prop key="mail.smtp.socketFactory.class">javax.net.ssl.SSLSocketFactory</prop>
+			</props>
+		</property>
+	</bean>
+
+	<!-- 启用spring task注解,执行定时任务 -->
+	<task:executor id="executor" pool-size="1" />
+	<task:scheduler id="scheduler" pool-size="1" />
+	<task:annotation-driven executor="executor" scheduler="scheduler" />
+
+
+	<!-- 包含文件 -->
+	<import resource="spring-db/spring-db-message.xml"/>
+	<import resource="spring-db/spring-db-access-master.xml"/>
+	<import resource="spring-db/spring-db-access-slave.xml"/>
+	<import resource="spring-db/spring-db-record-master.xml"/>
+	<import resource="spring-db/spring-db-record-slave.xml"/>
+	<import resource="spring-db/spring-db-stats-master.xml"/>
+	<import resource="spring-db/spring-db-test-master.xml"/>
+
+</beans>

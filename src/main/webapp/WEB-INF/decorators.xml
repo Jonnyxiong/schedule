@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<decorators defaultdir="/WEB-INF/content/decorators">
+
+	<!-- 需要装饰的目录或页面，有菜单 -->
+	<decorator name="main" page="main.jsp">
+		<pattern>/*/*</pattern>
+	</decorator>
+
+	<!-- 需要装饰的目录或页面，无菜单 -->
+	<decorator name="noMenuMain" page="noMenuMain.jsp">
+		<pattern>/</pattern>
+		<pattern>/index</pattern>
+		<pattern>/agent/common/*</pattern>
+		<pattern>/componentConf/viewRabbitMqQueueIframe</pattern>
+		<pattern>/componentConf/createRabbitMqQueueIframe</pattern>
+		<pattern>/channelTest/selectPhonesIframe</pattern>
+		<pattern>/channelTest/queryTestReportByReportId</pattern>
+		<pattern>/channelTest/generateTestReportAndReturn</pattern>
+		<pattern>/smsaudit/autoTemplate/add</pattern>
+		<pattern>/smsaudit/template/add</pattern>
+		<pattern>/auditorkeyword/editkeywordscategory</pattern>
+		<pattern>/auditorkeyword/editkeywords</pattern>
+		<pattern>/keyWordSconfiguration/add</pattern>
+		<pattern>/keyWordSconfiguration/configure</pattern>
+		<pattern>/keyWordGroup/add</pattern>
+
+	</decorator>
+
+	<!-- 排除不需要装饰的目录或页面 -->
+	<excludes>
+		<pattern>/common/*</pattern>
+		<pattern>/css/*</pattern>
+		<pattern>/images/*</pattern>
+		<pattern>/img/*</pattern>
+		<pattern>/font-awesome/*</pattern>
+		<pattern>/js/*</pattern>
+	</excludes>
+</decorators>

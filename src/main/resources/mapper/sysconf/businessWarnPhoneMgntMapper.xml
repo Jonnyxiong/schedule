@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统设置-业务预警人员号码管理-->
+<mapper namespace="businessWarnPhoneMgnt">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="phone != null and phone != ''">
+				phone LIKE CONCAT('%', #{phone}, '%')
+			</if>
+			<if test="clientid != null and clientid !=''">
+				AND
+				clientid LIKE CONCAT('%', #{clientid}, '%')
+			</if>
+		</where>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			id,
+			clientid,
+			phone,
+			DATE_FORMAT(
+				updatetime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS updatetime
+		FROM
+			t_sms_business_warn_phone
+		<include refid="queryCommon" />
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(1) AS totalCount
+		FROM
+			t_sms_business_warn_phone
+		<include refid="queryCommon" />
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			id,
+			clientid,
+			phone
+		FROM
+			t_sms_business_warn_phone
+		WHERE
+			id = #{id}
+	</select>
+	
+	<select id="saveCheck" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_business_warn_phone
+		WHERE
+			clientid = #{clientid}
+		<if test="id != null and id !=''">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<insert id="insert" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO `t_sms_business_warn_phone` (
+			`clientid`,
+			`phone`,
+			`updatetime`
+		)
+		VALUES
+			(
+				#{clientid},
+				#{phone},
+				NOW()
+			)
+	</insert>
+	
+	<update id="update">
+		UPDATE `t_sms_business_warn_phone`
+		SET
+		 `clientid` = #{clientid},
+		 `phone` = #{phone},
+		 `updatetime` = NOW()
+		WHERE
+			id = #{id}
+	</update>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_business_warn_phone` WHERE id = #{id}
+	</delete>
+	
+</mapper> 

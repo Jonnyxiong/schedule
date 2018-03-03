@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 用户短信通道管理-模板管理 -->
+<mapper namespace="confirm">
+
+	<select id="query" resultType="map">
+		SELECT
+		tem.channelid,
+		tem.id,
+		tem.templatetype,
+		tem.remarks,
+		tem.state,
+		tem.distoperators,
+		tem.ydchannelid ,
+		tem.ltchannelid ,
+		tem.dxchannelid ,
+		tem.gjchannelid ,
+		(select d.param_value from t_sms_dict d where d.param_type = 'user_gw_policy' and d.param_key = tem.policy) as policy,
+		(select d.param_value from t_sms_dict d where d.param_type = 'user_gw_policy' and d.param_key = tem.ydpolicy) as ydpolicy,
+		(select d.param_value from t_sms_dict d where d.param_type = 'user_gw_policy' and d.param_key = tem.ltpolicy) as ltpolicy,
+		(select d.param_value from t_sms_dict d where d.param_type = 'user_gw_policy' and d.param_key = tem.dxpolicy) as dxpolicy,
+		(select d.param_value from t_sms_dict d where d.param_type = 'user_gw_policy' and d.param_key = tem.gjpolicy) as gjpolicy
+		
+		
+		FROM
+		t_template_type_gw tem
+		
+
+		where 1=1
+		<if test="ids != null">
+			AND
+				tem.channelid LIKE concat('%', #{ids}, '%')
+			
+		</if>
+
+		ORDER BY
+		tem.id desc
+		${limit}
+
+	</select>
+
+	<select id="queryCount" resultType="map">
+		SELECT
+
+		count(0) AS totalCount
+		FROM
+		t_template_type_gw tem
+		where 1=1
+		<if test="ids != null">
+			AND 
+				 tem.channelid LIKE concat('%', #{ids}, '%')
+			
+		</if>
+		
+	</select>
+
+	<!-- 查看 -->
+	<select id="view" resultType="map">
+		SELECT
+		tem.channelid,
+		tem.id,
+		tem.templatetype,
+		tem.remarks,
+		tem.policy,
+		tem.distoperators,
+		tem.ltpolicy ,
+		tem.ydpolicy ,
+		tem.dxpolicy ,
+		tem.gjpolicy  ,
+		tem.ydchannelid ,
+		tem.ltchannelid ,
+		tem.dxchannelid ,
+		tem.gjchannelid 
+		FROM
+		t_template_type_gw tem
+		WHERE
+		tem.id =#{logId}
+	</select>
+
+	<select id="checkSave" resultType="map">
+		SELECT
+		id
+		FROM t_template_type_gw
+		WHERE templatetype = #{templatetype}
+		<if test="id != null">
+			AND id != #{id}
+		</if>
+		limit 1
+	</select>
+
+	<insert id="insertConfirm">
+		insert into
+		t_template_type_gw(
+		
+		channelid,
+		policy,
+		
+		<if test="distoperators==1">
+		ydpolicy,ltpolicy,dxpolicy,gjpolicy,ydchannelid,ltchannelid,dxchannelid,gjchannelid,
+		</if>
+		remarks,templatetype,state,distoperators)
+		VALUES(
+		<if test="distoperators==0">
+		#{channelid},
+		#{policy},
+		</if>
+		<if test="distoperators==1">
+		#{channelid_dis},
+		#{policy_dis},
+		#{ydpolicy},#{ltpolicy},#{dxpolicy},#{gjpolicy},#{ydchannelid},#{ltchannelid},#{dxchannelid},#{gjchannelid},
+		</if>
+		#{remark},#{templatetype},0, #{distoperators})
+	</insert>
+
+	
+
+	<update id="updateConfirm">
+		update  t_template_type_gw t 
+				set t.templatetype=#{templatetype}  ,
+				t.distoperators = #{distoperators},
+				<if test="distoperators==1">
+					t.policy = #{policy_dis},
+					t.channelid  = #{channelid_dis},
+					t.ltpolicy = #{ltpolicy},
+					t.ydpolicy = #{ydpolicy},
+					t.dxpolicy = #{dxpolicy},
+					t.gjpolicy = #{gjpolicy},
+					t.ydchannelid = #{ydchannelid},
+					t.ltchannelid = #{ltchannelid},
+					t.dxchannelid = #{dxchannelid},
+					t.gjchannelid = #{gjchannelid},
+				</if>
+				<if test="distoperators==0">
+					t.policy = #{policy},
+					t.channelid  = #{channelid},
+					t.ltpolicy = 0,
+					t.ydpolicy = 0,
+					t.dxpolicy = 0,
+					t.gjpolicy = 0,
+					t.ydchannelid = "",
+					t.ltchannelid = "",
+					t.dxchannelid = "",
+					t.gjchannelid = "",
+				</if>
+				t.remarks=#{remark}
+				where  t.id=#{id}
+	</update>
+
+	<update id="updateStatus">
+		update t_template_type_gw t set t.state=#{state}
+		where
+		t.id=#{id}
+	</update>
+
+	<!-- 删除m模板 -->
+	<delete id="delete">
+		delete from t_template_type_gw  where id=#{id}
+	</delete>
+
+</mapper>

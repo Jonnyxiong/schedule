@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 客户运维报表 -->
+<mapper namespace="customerOpretion">
+	
+	<sql id="query_common">
+		<where>
+			<choose>
+				<when test="stat_type == 1">
+					t.date BETWEEN #{start_time_day}
+					AND #{end_time_day}
+					AND t.stattype IN (0, 1) <!-- 每日详单和每日合计 -->
+				</when>
+				<otherwise>
+					t.date BETWEEN #{start_time_month}
+					AND #{end_time_month}
+					AND t.stattype IN(2 ,3) <!-- 每月详单和每月合计 -->
+				</otherwise>
+			</choose>
+			<if test="text != null">
+				AND (t.clientid LIKE concat('%', #{text}, '%')
+					 OR t.name LIKE concat('%', #{text}, '%')
+					 OR t.agent_id LIKE concat('%', #{text}, '%')
+					)
+			</if>
+			<if test="operatorstype != null">
+				AND t.operatorstype = #{operatorstype}
+			</if>
+			<if test="channel_id != null">
+				AND t.channelid = #{channel_id}
+			</if>
+			<if test="belong_sale != null and belong_sale != ''">
+				AND t.belong_sale = #{belong_sale}
+			</if>
+		</where>
+	</sql>
+	<select id="query" resultType="map">
+		SELECT
+			t.date,
+			t.clientid,
+			t.name,
+			t.agent_id,
+			t.operatorstype,
+			t.charge_rule,
+			CASE t.stattype
+			WHEN 2 THEN '-'
+			WHEN 3 THEN '-'
+			ELSE
+
+		CASE t.charge_rule
+		WHEN 0 THEN '提交量'
+		WHEN 1 THEN '成功量'
+		ELSE '明确成功量' END
+			END AS chargeRuleStr,
+
+			CASE t.operatorstype
+				WHEN -1 THEN '拦截'
+				WHEN -2 THEN '合计'
+				WHEN 0 THEN '全网'
+				WHEN 1 THEN '移动'
+				WHEN 2 THEN '联通'
+				WHEN 3 THEN '电信'
+				WHEN 4 THEN '国际'
+				WHEN 5 THEN '虚拟移动'
+				WHEN 6 THEN '虚拟联通'
+				WHEN 7 THEN '虚拟电信'
+			END AS operatorstype_name,
+			CASE t.channelid
+				WHEN -1 THEN ' - '
+				ELSE channelid
+			END AS channelid,
+			t.remark,
+			SUM(t.usersmstotal) AS usersmstotal,
+			SUM(t.sendtotal) AS sendtotal,
+			CONCAT(ROUND(SUM(t.reportsuccess) / IF(SUM(t.sendtotal)=0,1,SUM(t.sendtotal)) * 100, 3), '%') AS successrate,
+			(SUM(t.submitsuccess) + SUM(t.reportsuccess)) AS successtotal,
+			SUM(t.submitsuccess) AS submitsuccess,
+			SUM(t.reportsuccess) AS reportsuccess,
+			SUM(t.submitfail) AS submitfail,
+			SUM(t.subretfail) AS subretfail,
+			SUM(t.reportfail) AS reportfail,
+			SUM(t.auditfail) AS auditfail,
+			SUM(t.recvintercept) AS recvintercept,
+			SUM(t.sendintercept) AS sendintercept,
+			SUM(t.notsend) AS notsend,
+			SUM(t.overrateintercept) AS overrateintercept,
+			IFNULL(t.belong_sale, " - ") AS belong_sale
+		FROM
+			t_sms_access_channel_statistics t
+			
+		<include refid="query_common"/>
+		
+		GROUP BY date,clientid,channelid,belong_sale,operatorstype
+		ORDER BY date,clientid,operatorstype DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(0) AS totalCount
+		FROM(
+			SELECT clientid FROM
+				t_sms_access_channel_statistics t
+			<include refid="query_common"/>
+			GROUP BY date,clientid,channelid,belong_sale,operatorstype ORDER BY date,clientid,operatorstype DESC
+		) temp
+		
+	</select>
+	
+	<select id="total" resultType="map">
+		SELECT
+			SUM(t.usersmstotal) AS usersmstotal,
+			SUM(t.sendtotal) AS sendtotal,
+			CONCAT(ROUND(SUM(t.reportsuccess) / IF(SUM(t.sendtotal)=0,1,SUM(t.sendtotal)) * 100, 3), '%') AS successrate,
+			(SUM(t.submitsuccess) + SUM(t.reportsuccess)) AS successtotal,
+			SUM(t.submitsuccess) AS submitsuccess,
+			SUM(t.reportsuccess) AS reportsuccess,
+			SUM(t.submitfail) AS submitfail,
+			SUM(t.subretfail) AS subretfail,
+			SUM(t.reportfail) AS reportfail,
+			SUM(t.auditfail) AS auditfail,
+			SUM(t.recvintercept) AS recvintercept,
+			SUM(t.sendintercept) AS sendintercept,
+			SUM(t.notsend) AS notsend,
+			SUM(t.overrateintercept) AS overrateintercept
+		FROM
+			t_sms_access_channel_statistics t
+		<include refid="query_common"/>
+		<choose>
+			<!-- 过滤合计数据 -->
+			<when test="stat_type == 1">
+				AND t.stattype != 1 
+			</when>
+			<otherwise>
+				AND t.stattype != 3
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="queryBelongSaleName" resultType="string">
+		SELECT realname FROM t_sms_user WHERE id = #{belongSale}
+	</select>
+	
+</mapper> 

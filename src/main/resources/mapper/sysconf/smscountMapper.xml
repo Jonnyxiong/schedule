@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-系统参数 -->
+<mapper namespace="smscount">
+	<select id="query_channelid" resultType="map">
+		SELECT
+			l.id,
+			l.channelid,
+			l.smscount,
+			date_format(
+				l.createdate,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM
+			t_sms_count_channelid l
+		WHERE
+			1 = 1
+		
+		<if test="text != null">
+			AND l.channelid LIKE concat('%',#{text}, '%')
+		</if>
+		ORDER BY
+			l.createdate DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount_channelid" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_count_channelid l
+		WHERE
+			1 = 1
+		
+		<if test="text != null">
+			AND l.channelid LIKE concat('%',#{text}, '%')
+		</if>
+	</select>
+	
+	<select id="query_sid" resultType="map">
+		SELECT
+			l.id,
+			l.smscount,
+			l.sid,
+			date_format(
+				l.createdate,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime
+		FROM
+			t_sms_count_sid l
+		WHERE
+			1 = 1
+		
+		<if test="text != null">
+			AND l.sid LIKE concat('%',#{text}, '%')
+		</if>
+		ORDER BY
+			l.createdate DESC
+		${limit}
+	</select>
+	<select id="queryCount_sid" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_count_sid l
+		WHERE
+			1 = 1
+		
+		<if test="text != null">
+			AND l.sid LIKE concat('%',#{text}, '%')
+		</if>
+	</select>
+	
+	
+	<delete id="deleteSmscount_sid">
+		delete from t_sms_count_sid where id = #{id}
+	</delete>
+	
+	<delete id="deleteSmscount_channelid">
+		delete from t_sms_count_channelid where id = #{id}
+	</delete>
+	
+	
+	
+	<select id="checkSave_channelid" resultType="map">
+	SELECT
+		id
+		FROM t_sms_count_channelid
+		WHERE channelid = #{channelid}
+		<if test="id != null">
+			AND id != #{id}
+		</if>
+		limit 1
+	
+	</select>
+	
+	<select id="checkSave_sid" resultType="map">
+	
+	SELECT
+		id
+		FROM t_sms_count_sid
+		WHERE sid = #{sid}
+		<if test="id != null">
+			AND id != #{id}
+		</if>
+		limit 1
+	
+	</select>
+	
+	<select id="view_sid" resultType="map">
+	
+		SELECT id,sid,smscount
+		FROM t_sms_count_sid
+		WHERE id=#{id}
+	
+	</select>
+	
+	<select id="view_channelid" resultType="map">
+	
+		SELECT id,channelid,smscount
+		FROM t_sms_count_channelid
+		WHERE id=#{id}
+	
+	</select>
+	
+	<insert id="insert_smscount_channelid">
+	INSERT INTO t_sms_count_channelid(channelid,smscount,createdate)
+	VALUES(#{channelid},#{smscount},now())
+	
+	</insert>
+	
+	<insert id="insert_smscount_sid">
+	INSERT INTO t_sms_count_sid(sid,smscount,createdate)
+	VALUES(#{sid},#{smscount},now())
+	
+	</insert>
+	
+	
+	
+	
+	
+	<update id="update_smscount_channelid">
+	
+	UPDATE t_sms_count_channelid SET channelid=#{channelid},smscount=#{smscount}
+	WHERE id=#{id}
+	</update>
+	
+	<update id="update_smscount_sid">
+	
+	UPDATE t_sms_count_sid SET sid=#{sid},smscount=#{smscount}
+	WHERE id=#{id}
+	</update>
+</mapper> 

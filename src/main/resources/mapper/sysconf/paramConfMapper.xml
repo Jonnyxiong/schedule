@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-系统参数 -->
+<mapper namespace="paramConf">
+	<select id="query" resultType="map">
+		SELECT
+			param_id,param_key,param_value,description,create_date
+		FROM t_sms_param
+		where param_status = 1
+		ORDER BY
+			update_date DESC
+		${limit}
+	</select>
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			t_sms_param
+		where param_status = 1
+	</select>
+
+	<!-- 查看操作日志 -->
+	<select id="view" resultType="map">
+		SELECT
+			param_id,param_key,param_value,description,create_date
+		FROM t_sms_param
+		where param_id = #{param_id}
+	</select>
+	
+	<!-- 根据param_key查看系统参数 -->
+	<select id="viewByKey" resultType="map">
+		SELECT
+			param_id,param_key,param_value,description,create_date
+		FROM t_sms_param
+		where param_key = #{param_key}
+	</select>
+	
+	<select id="checkSave" resultType="map">
+		SELECT
+			param_id
+		FROM t_sms_param
+		WHERE param_status = 1 AND param_key = #{param_key}
+		<if test="param_id != null">
+			AND param_id != #{param_id}
+		</if>
+		limit 1
+	</select>
+	
+	<insert id="insertParam">
+		insert into t_sms_param(param_key,param_value,description,create_date,update_date,param_status) 
+		values(#{param_key},#{param_value},#{description},now(),now(),1)
+	</insert>
+	
+	<update id="updateParam">
+		update t_sms_param set
+		param_value = #{param_value},description = #{description},update_date = now()
+		where param_id = #{param_id}
+	</update>
+	
+	<update id="updateStatus">
+		update t_sms_param set
+		param_status = #{param_status},update_date = now()
+		where param_id = #{param_id}
+	</update>
+</mapper> 

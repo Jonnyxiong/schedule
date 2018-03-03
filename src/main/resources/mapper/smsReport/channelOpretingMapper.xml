@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 通道运营报表 -->
+<mapper namespace="channelOpreting">
+	
+	<sql id="query_common">
+		<where>
+			<if test="channel_id != null">
+				t.channelid = #{channel_id}
+			</if>
+			<if test="operatorstype != null">
+				AND t.operatorstype = #{operatorstype}
+			</if>
+			<choose>
+				<when test="stat_type == 1">
+					AND t.date BETWEEN #{start_time_day}
+					AND #{end_time_day}
+					AND t.stattype IN (0, 1) <!-- 每日详单和每日合计 -->
+				</when>
+				<otherwise>
+					AND t.date BETWEEN #{start_time_month}
+					AND #{end_time_month}
+					AND t.stattype IN(2 ,3) <!-- 每月详单和每月合计 -->
+				</otherwise>
+			</choose>
+		</where>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			t.date,
+			t.operatorstype,
+			CASE t.operatorstype
+				WHEN -2 THEN '合计'
+				WHEN 0 THEN '全网'
+				WHEN 1 THEN '移动'
+				WHEN 2 THEN '联通'
+				WHEN 3 THEN '电信'
+				WHEN 4 THEN '国际'
+				WHEN 5 THEN '虚拟移动'
+				WHEN 6 THEN '虚拟联通'
+				WHEN 7 THEN '虚拟电信'
+			END AS operatorstype_name,
+			CASE t.channelid
+				WHEN -1 THEN ' - '
+				ELSE channelid
+			END AS channelid,
+			t.remark,
+			SUM(t.chargetotal) AS chargetotal,
+			ROUND(SUM(t.costtotal) / 1000,3) AS costtotal,
+			t.stattype,
+			t.belong_business
+		FROM
+			t_sms_record_channel_statistics t
+			
+		<include refid="query_common"/>
+		GROUP BY t.date,t.operatorstype,t.channelid,t.belong_business
+		ORDER BY t.date,t.operatorstype DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT 
+			COUNT(0) AS totalCount
+		FROM(
+			SELECT channelid FROM
+				t_sms_record_channel_statistics t
+			<include refid="query_common"/>
+			GROUP BY t.date,t.operatorstype,t.channelid,t.belong_business
+		) temp
+	</select>
+	
+	<select id="total" resultType="map">
+		SELECT
+			SUM(t.chargetotal) AS chargetotal,
+			ROUND(SUM(t.costtotal) / 1000,3) AS costtotal
+		FROM
+			t_sms_record_channel_statistics t
+		<include refid="query_common"/>
+		<choose>
+			<!-- 过滤合计数据 -->
+			<when test="stat_type == 1">
+				AND t.stattype != 1 
+			</when>
+			<otherwise>
+				AND t.stattype != 3
+			</otherwise>
+		</choose>
+	</select>
+	
+	<select id="queryBelongBusinessName" resultType="string">
+		<!-- SELECT u.realname AS belongBusinessName
+		FROM t_sms_user u
+		LEFT JOIN t_sms_user_role ur ON ur.user_id = u.id
+		LEFT JOIN t_sms_role r ON r.id = ur.role_id
+		WHERE r.role_name = "商务人员" AND u.id = #{belongBusiness} -->
+		SELECT realname FROM t_sms_user WHERE id = #{belongBusiness}
+	</select>
+	
+</mapper> 

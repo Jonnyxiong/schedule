@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 销售人员月统计报表 -->
+<mapper namespace="monthlyStatistics">
+	
+	<!-- 查询所有记录 -->
+	<select id="query" statementType="CALLABLE" resultType="map" parameterType="map">
+		 <![CDATA[  
+	        {call p_salesman_monthly_statistics (#{name,mode=IN,jdbcType=VARCHAR},
+	        									 #{start_time,mode=IN,jdbcType=VARCHAR},
+	        									 #{end_time,mode=IN,jdbcType=VARCHAR},
+	        									 #{limit,mode=IN,jdbcType=VARCHAR})}
+	    	]]>
+	</select>
+		
+	<!-- 记录总数 -->
+	<select id="queryCount" resultType="map" parameterType="map">
+		SELECT
+			COUNT(1) AS totalCount  
+		FROM
+			(SELECT t0.salesman_id,
+							 t0.salesman_name,
+							 t0.customer_id,
+							 t0.customer_name,
+							 t0.recharge_time,
+							 SUM(t0.recharge_royalty) AS month_customer_royalty
+				FROM
+						(SELECT
+							r.id AS id,
+							s.id AS salesman_id,
+							s. NAME AS salesman_name,
+							r.customerid AS customer_id,
+							r.customername AS customer_name,
+							r.rechargemoney AS recharge_money,
+							r.rechargemark AS recharge_mark,
+							r.recharge_unit_price AS recharge_unit_price,
+							r.recharge_cost_price AS recharge_cost_price,
+							r.rechargetime AS recharge_time,
+							r.recharge_profit AS recharge_profit,
+							r.recharge_royalty AS recharge_royalty
+						FROM
+							t_sms_customer_recharge_record r
+						INNER JOIN t_sms_salesman s ON r.salesmanid = s.id) t0
+				GROUP BY t0.customer_id, t0.recharge_time) t1 
+		RIGHT JOIN t_sms_customer_recharge_record r ON r.rechargetime = t1.recharge_time AND r.customerid = t1.customer_id
+		LEFT JOIN t_sms_salesman s ON r.salesmanid = s.id
+		LEFT JOIN t_sms_salesman_monthly_task st ON r.salesmanid = st.salesmanid AND r.rechargetime = st.taskofmoth
+		WHERE (t1.customer_name LIKE CONCAT('%',#{name},'%') 
+		OR t1.salesman_name LIKE CONCAT('%',#{name},'%'))
+		AND t1.recharge_time BETWEEN #{start_time} AND #{end_time}
+		ORDER BY r.salesmanid,r.customerid,r.createtime
+		
+	</select>
+	
+</mapper> 

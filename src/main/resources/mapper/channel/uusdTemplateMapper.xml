@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 通道组管理-彩印通道模板信息 -->
+<mapper namespace="uusdTemplate">
+
+	<sql id="auditResult_search_segement">
+		<where>
+			<if test="template_id != null">
+				template_id LIKE CONCAT('%',#{template_id},'%')
+			</if>
+			<if test="channelid != null">
+				AND channelid LIKE CONCAT('%',#{channelid},'%')
+			</if>
+			<if test="search_status != null and search_status != -1">
+				AND status = #{search_status}
+			</if>
+			<if test="channel_tempid != null">
+				AND channel_tempid LIKE CONCAT('%',#{channel_tempid},'%')
+			</if>
+			
+		</where>
+	</sql>
+	
+	<select id="queryAuditResult" resultType="map">
+		SELECT
+			template_id,
+			channelid,
+			status,
+			result,	
+			channel_tempid,
+			remark,
+			date_format(
+				create_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS create_time
+		FROM
+			t_sms_template_audit
+		<include refid="auditResult_search_segement"/>
+		${limit}
+	</select>
+	
+	<select id="queryAuditResultCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+		t_sms_template_audit
+		<include refid="auditResult_search_segement"/>
+	</select>
+
+	<select id="queryTokenLog" resultType="map">
+		SELECT
+			a.id,
+			a.channelid,
+			a.access_token,
+			a.expires_in,
+			a.refresh_token,
+			date_format(
+				a.create_time,
+				'%Y-%m-%d %H:%i:%S'
+			) AS create_time
+		FROM
+			t_sms_channel_token_log a
+		INNER JOIN (
+			SELECT
+				MAX(create_time) AS create_time,
+				channelid
+			FROM
+				t_sms_channel_token_log
+			GROUP BY
+				channelid
+		) b ON a.channelid = b.channelid
+		AND a.create_time = b.create_time
+		<if test="channelid != null">
+			WHERE a.channelid LIKE CONCAT('%',#{channelid},'%')
+		</if>
+		${limit}
+		
+	</select>
+	
+	<select id="queryTokenLogCount" resultType="map">
+		SELECT
+			count(1) AS totalCount
+		FROM
+			t_sms_channel_token_log a
+		INNER JOIN (
+			SELECT
+				MAX(create_time) AS create_time,
+				channelid
+			FROM
+				t_sms_channel_token_log
+			GROUP BY
+				channelid
+		) b ON a.channelid = b.channelid
+		AND a.create_time = b.create_time
+		<if test="channelid != null">
+			WHERE a.channelid LIKE CONCAT('%',#{channelid},'%')
+		</if>
+	</select>
+	
+</mapper> 

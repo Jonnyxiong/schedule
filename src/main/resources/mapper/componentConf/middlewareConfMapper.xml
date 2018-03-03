@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 组件管理-中间件配置 -->
+<mapper namespace="middlewareConf">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="middleware_type != null and middleware_type != -1">
+				middleware_type = #{middleware_type}
+			</if>
+			<if test="middleware_name">
+				AND
+				middleware_name LIKE CONCAT('%', #{middleware_name}, '%')
+			</if>
+		</where>
+	</sql>
+
+	<select id="query" resultType="map">
+		SELECT
+			middleware_id,
+			middleware_type,
+			middleware_name,
+			host_ip,
+			port,
+			console_port,
+			user_name,
+			pass_word,
+			node_id,
+			date_format(
+				update_date,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_date,
+			updater
+		FROM
+			t_sms_middleware_configure
+		<include refid="queryCommon"/>
+		ORDER BY middleware_type ASC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_middleware_configure
+		<include refid="queryCommon"/>
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			middleware_id,
+			middleware_type,
+			middleware_name,
+			host_ip,
+			port,
+			console_port,
+			user_name,
+			pass_word,
+			node_id,
+			update_date,
+			updater
+		FROM
+			t_sms_middleware_configure
+		WHERE
+			middleware_id = #{middleware_id}
+	</select>
+	
+	<select id="saveCheck" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_middleware_configure
+		<where>
+			middleware_type = #{middleware_type}
+			<if test="middleware_id !=null and middleware_id != ''">
+				AND middleware_id != #{middleware_id}
+			</if>
+		</where>
+	</select>
+	
+	<insert id="insert">
+		INSERT INTO `t_sms_middleware_configure` (
+			`middleware_id`,
+			`middleware_type`,
+			`middleware_name`,
+			`host_ip`,
+			`port`,
+			`console_port`,
+			`user_name`,
+			`pass_word`,
+			`node_id`,
+			`update_date`,
+			`updater`
+		)
+		VALUES
+			(
+				#{middleware_id},
+				#{middleware_type},
+				#{middleware_name},
+				#{host_ip},
+				#{port},
+				#{console_port},
+				#{user_name},
+				#{pass_word},
+				#{node_id},
+				NOW(),
+				#{updater}
+			)
+	</insert>
+	
+	<update id="update">
+		UPDATE `t_sms_middleware_configure`
+		SET
+		 `middleware_id` = #{middleware_id},
+		 `middleware_type` = #{middleware_type},
+		 `middleware_name` = #{middleware_name},
+		 `host_ip` = #{host_ip},
+		 `port` = #{port},
+		 `console_port` = #{console_port},
+		 `user_name` = #{user_name},
+		 `pass_word` = #{pass_word},
+		 `node_id` = #{node_id},
+		 `update_date` = NOW(),
+		 `updater` = #{updater}
+		WHERE
+			`middleware_id` = #{old_middleware_id}
+	</update>
+	
+	<select id="deleteCheck" resultType="int">
+		SELECT COUNT(1) FROM t_sms_mq_configure WHERE middleware_id = #{middleware_id}
+	</select>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_middleware_configure` WHERE middleware_id = #{middleware_id}
+	</delete>
+	
+	<!-- 获得同一IP下面当前中间件的最大序号,不存在时返回0 -->
+	<select id="getMaxIndexOfMiddlewareInSanmeIp" resultType="int">
+		SELECT
+			MAX(SUBSTR(middleware_id, 4, 1)) <!-- middleware_id的第5位是序号 -->
+		FROM
+			t_sms_middleware_configure
+		WHERE
+			host_ip = #{host_ip} AND middleware_type = #{middleware_type}
+	</select>
+	
+	<select id="isMidNoChange" resultType="boolean">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_middleware_configure
+		WHERE
+			middleware_id = #{middleware_id}
+		AND host_ip = #{host_ip}
+		AND middleware_type = #{middleware_type}
+		AND node_id = #{node_id}
+	</select>
+	
+	<!-- 修改“中间件配置表”时如果middleware_id改变需要更新“MQ配置表”中的middleware_id -->
+	<update id="updateMqConfTableMiddlewareId">
+		UPDATE t_sms_mq_configure
+		SET middleware_id = #{middleware_id}
+		WHERE
+			middleware_id = #{old_middleware_id}
+	</update>
+	
+	<select id="queryRabbitMqQueueList" resultType="map">
+		SELECT
+			middleware_id,
+			mq_queue,
+			mq_exchange,
+			mq_routingkey
+		FROM
+			t_sms_mq_configure
+		WHERE
+			middleware_id = #{middleware_id}
+	</select>
+	
+	<delete id="deleteMqConfigByMiddlewareId">
+		DELETE FROM t_sms_mq_configure WHERE middleware_id = #{middleware_id}
+	</delete>
+	
+	<select id="getMiddlewareMqConfigNum" resultType="map">
+		SELECT COUNT(1) as totalCount FROM t_sms_mq_configure WHERE middleware_id = #{middleware_id}
+	</select>
+</mapper> 

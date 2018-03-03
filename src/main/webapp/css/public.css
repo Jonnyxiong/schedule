@@ -1,0 +1,11 @@
+@charset "utf-8";
+/* 自定义样式 */
+
+/*图表样式*/
+.chart_box {background-color:#fff;}
+.chart_button {float:right;}
+
+.navbar .nav>.active>a, .navbar .nav>.active>a:hover, .navbar .nav>.active>a:focus{border-bottom: 4px solid #28B779;background:#EEEEEE;}
+.nav-tabs>li>a{border: 0;}
+
+.table-hover tbody tr:hover>td, .table-hover tbody tr:hover>th { background-color: #D6F1DA;}

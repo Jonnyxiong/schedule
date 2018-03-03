@@ -1,0 +1,852 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 账户管理 -->
+<mapper namespace="account">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="clientId != null and clientId !=''">
+				a.clientid LIKE TRIM(CONCAT('%',#{clientId},'%'))
+			</if>
+			<if test="userName != null and userName !=''">
+				AND
+				a.name LIKE TRIM(CONCAT('%',#{userName},'%'))
+			</if>
+			<if test="status != null and status != -1">
+				AND
+				a.status = #{status}
+			</if>
+			<if test="identify != null and identify !=''">
+				AND 
+				a.identify = #{identify}
+			</if>
+			
+		</where>
+	</sql>
+
+	<!-- 获取所有账户信息 -->
+	<select id="query" resultType="map">
+		SELECT
+			a.clientid,
+			a.password,
+			a.sid,
+			CASE a.needaudit
+				WHEN 0 THEN '不需要'
+				WHEN 1 THEN '营销需要'
+				WHEN 2 THEN '全部需要'
+				WHEN 3 THEN '审核关键字'
+				END AS needaudit,
+			CASE a.needreport
+				WHEN 0 THEN '不获取'
+				WHEN 1 THEN '推送简单状态报告'
+				WHEN 2 THEN '推送透传状态报告'
+				WHEN 3 THEN '用户主动拉取'
+				END AS needreport,
+			CASE a.needmo
+				WHEN 0 THEN '不获取'
+				WHEN 1 THEN 'SMSP推送'
+				WHEN 3 THEN '用户主动拉取'
+				END AS needmo,
+			a.status,
+			a.name,
+			a.nodenum,
+			a.needextend,
+			a.signextend,
+			CASE a.paytype
+				WHEN 0 THEN '预付费'
+				WHEN 1 THEN '后付费'
+				END AS paytype,
+			a.remarks,
+			a.smstype,
+			a.smsfrom,
+			a.isoverratecharge,
+			a.agent_id,
+			a.oauth_status,
+			CASE a.oauth_status
+				WHEN 2 THEN '待认证'
+				WHEN 3 THEN '已认证'
+				WHEN 4 THEN '认证不通过'
+				END AS oauth_status_name,
+			a.identify,
+			a.extend_size,
+			a.client_ascription,
+			a.extendport,
+			a.signportlen,
+			a.http_protocol_type,
+			inf.client_label
+		FROM
+			t_sms_account a
+		LEFT JOIN t_sms_client_info_ext inf ON a.clientid = inf.clientid
+		<include refid="queryCommon"/>
+		ORDER BY a.createtime DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_account a
+		<include refid="queryCommon"/>
+	</select>
+	
+	<select id="getAccount" resultType="map">
+		SELECT
+			a.id,
+			a.clientid,
+			a.password,
+			a.name,
+			a.sid,
+			a.needaudit,
+			a.needreport,
+			a.needmo,
+			a.ip,
+			a.mourl,
+			a.nodenum,
+			a.paytype,
+			a.needextend,
+			a.signextend,
+			a.deliveryurl,
+			a.remarks,
+			a.status,
+			a.smstype,
+			a.smsfrom,
+			a.isoverratecharge,
+			a.client_level,
+			a.client_type,
+			a.spnum,
+			a.identify,
+			a.moip,
+			a.moport,
+			a.nodeid,
+			a.getreport_interval,
+			a.getreport_maxsize,
+			a.oauth_status,
+			a.access_speed,
+			a.agent_id,
+			a.extend_size,
+			a.client_ascription,
+			a.extendtype,
+			a.extendport,
+			a.signportlen,
+			a.belong_sale,
+			a.policy_id,
+			a.http_protocol_type
+		FROM
+			t_sms_account a
+		WHERE a.clientid = #{clientid}
+	</select>
+	
+	<select id="checkAccount" resultType="map">
+		SELECT clientid 
+		FROM t_sms_account 
+		WHERE clientid = TRIM(#{clientid})
+		<if test="id != null">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<insert id="insertAccount">
+		INSERT INTO t_sms_account
+		(
+			id,
+			clientid,
+			password,
+			name,
+			sid,
+			status,
+			needreport,
+			needmo,
+			needaudit,
+			createtime,
+			ip,
+			mourl,
+			nodenum,
+			paytype,
+			needextend,
+			remarks,
+			signextend,
+			deliveryurl,
+			smstype,
+			smsfrom,
+			isoverratecharge,
+			agent_id,
+			oauth_status,
+			oauth_date,
+			mobile,
+			email,
+			address,
+			realname,
+			client_level,
+			client_type,
+			updatetime,
+			spnum,
+			identify,
+			moip,
+			moport,
+			nodeid,
+			getreport_interval,
+			getreport_maxsize,
+			access_speed,
+			extend_size,
+			client_ascription,
+			extendtype,
+			extendport,
+			signportlen,
+			belong_sale,
+			<if test="policy_id != null and policy_id != ''">
+			policy_id ,
+			</if>
+			http_protocol_type
+
+		)
+		VALUES
+		(
+			#{id},
+			LOWER(#{clientid}),
+			#{password},
+			#{name},
+			#{sid},
+			#{status},
+			#{needreport},
+			#{needmo},
+			#{needaudit},
+			NOW(),
+			#{ip},
+			#{mourl},
+			#{nodenum},
+			#{paytype},
+			#{needextend},
+			#{remarks},
+			#{signextend},
+			#{deliveryurl},
+			#{smstype},
+			#{smsfrom},
+			#{isoverratecharge},
+			<choose>
+				<when test="agent_id != null and agent_id !=''">
+					#{agent_id},
+				</when>
+				<otherwise>
+					NULL, <!-- 直客的所属代理商为NULL -->
+				</otherwise>
+			</choose>
+			#{oauth_status},
+			<if test="oauth_status == 2">
+				NULL,<!-- oauth_date -->
+			</if>
+			<if test="oauth_status == 3">
+				#{now},<!-- oauth_date -->
+			</if>
+			"",<!-- mobile -->
+			"",<!-- email -->
+			"",<!-- address -->
+			"",<!-- realname -->
+			#{client_level},
+			#{client_type},
+			#{now},
+			#{spnum},
+			#{identify},
+			#{moip},
+			#{moport},
+			#{nodeid},
+			#{getreport_interval},
+			#{getreport_maxsize},
+			#{access_speed},
+			#{extend_size},
+			1,<!-- client_ascription -->
+			#{extendtype},
+			#{extendport},
+			#{signportlen},
+			#{belong_sale},
+			<if test="policy_id != null and policy_id != ''">
+			 #{policy_id},
+			</if>
+			#{http_protocol_type}
+		)
+		
+	</insert>
+	<insert id="insertClientInfoExt" >
+		INSERT INTO `t_sms_client_info_ext` (
+			`clientid`,
+			`web_password`,
+			`ext_value`,
+			`parent_id`,
+			`updator`,
+			`update_date`,
+			`remark`
+		)
+		VALUES
+			(
+				LOWER(#{clientid}),
+				#{password},
+				#{ext_value},
+				#{parent_id},
+				#{adminId},
+				#{now},
+				#{remark}
+			)
+	</insert>
+
+	<update id="updateClientInfoExt">
+		UPDATE `t_sms_client_info_ext`
+		SET
+		 `web_password` = #{password},
+		 `ext_value` = #{ext_value},
+		 `parent_id` = #{parent_id},
+		 `updator` = #{adminId},
+		 `update_date` = #{now},
+		 `remark` = #{remark}
+		WHERE
+			`clientid` = LOWER(#{clientid})
+	</update>
+
+	<update id="updateAccount">
+		UPDATE t_sms_account a
+		SET a.clientid = LOWER(#{clientid}),
+		a.password = #{password},
+			a.name = #{name},
+			a.sid = #{sid},
+			a.needreport = #{needreport},
+			a.needmo = #{needmo},
+			a.needaudit = #{needaudit},
+			a.ip = #{ip},
+			a.mourl = #{mourl},
+			a.nodenum = #{nodenum},
+			a.paytype = #{paytype},
+			a.needextend = #{needextend},
+			a.remarks = #{remarks},
+			a.signextend = #{signextend_bak},
+			a.deliveryurl = #{deliveryurl},
+			a.smstype = #{smstype},
+			a.smsfrom = #{smsfrom},
+			a.isoverratecharge = #{isoverratecharge},
+			a.client_level = #{client_level},
+			a.client_type = #{client_type},
+			a.updatetime = NOW(),
+			a.spnum = #{spnum},
+			<if test="identify != null and identify != ''">
+				a.identify = #{identify},
+			</if>
+			a.moip = #{moip},
+			a.moport = #{moport},
+			a.nodeid = #{nodeid},
+			a.getreport_interval = #{getreport_interval},
+			a.getreport_maxsize = #{getreport_maxsize},
+			a.oauth_status = #{oauth_status},
+			a.access_speed = #{access_speed},
+			<choose>
+				<when test="agent_id != null and agent_id !=''">
+					a.agent_id = #{agent_id},
+				</when>
+				<otherwise>
+					a.agent_id = NULL, <!-- 直客的所属代理商为NULL -->
+				</otherwise>
+			</choose>
+			a.extend_size = #{extend_size},
+			a.extendtype = #{extendtype},
+			a.extendport = #{extendport},
+			a.signportlen = #{signportlen},
+			a.belong_sale = #{belong_sale},
+			<if test="policy_id != null and policy_id != ''">
+			a.policy_id = #{policy_id},
+			</if>
+
+			a.http_protocol_type = #{http_protocol_type}
+		WHERE a.id = #{id}
+	</update>
+	
+	<update id="updateStatus">
+		UPDATE t_sms_account a
+		SET 
+		<if test="remarks != null">
+			a.remarks = #{remarks},
+		</if>
+		a.status = #{status},
+		a.updatetime = NOW()
+		WHERE a.clientid = #{clientid}
+	</update>
+	
+	<!-- 子账号是否配置通道组 -->
+	<select id="isClientChannelGroupAssign" resultType="map">
+		SELECT
+			userid
+		FROM
+			t_user_gw
+		WHERE
+			userid = #{userid}
+		<if test="smstype != null">
+			AND smstype = #{smstype}
+		</if>
+		LIMIT 1
+	</select>
+	
+	
+	<select id="getCustomerInfoByCusInfo" resultType="map">
+		SELECT 
+			ac.clientid as clientid,
+			ac.name as name,
+			ac.mobile as mobile,
+			CASE ac.status
+				WHEN 1 THEN '注册完成'
+				WHEN 5 THEN '冻结'
+				WHEN 6 THEN '注销'
+				WHEN 7 THEN '锁定'
+			END as status,
+			
+			CASE ac.oauth_status
+				WHEN 2 THEN '待认证'
+				WHEN 3 THEN '证件已认证'
+				WHEN 4 THEN '认证不通过'
+			END as oauth_status,
+			
+			ac.agent_id as agent_id,
+			ac.paytype as paytype,
+			date_format(
+				ac.createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime,
+			ag.agent_name as agent_name
+		FROM 
+			t_sms_account ac INNER JOIN t_sms_agent_info ag ON ac.agent_id = ag.agent_id and ag.agent_id = #{agent_id}
+		WHERE 1 = 1
+		AND 
+		(
+			ac.clientid = #{customerInfo} 
+			or ac.mobile = #{customerInfo}
+			or ac.email = #{customerInfo}
+<!-- 			or ac.name = #{customerInfo}  -->
+		)
+		LIMIT 1
+	</select>
+	
+	<select id="getCustomerInfoByCusInfoForOpsp" resultType="map">
+		SELECT 
+			ac.clientid as clientid,
+			ac.name as name,
+			ac.mobile as mobile,
+			CASE ac.status
+				WHEN 1 THEN '注册完成'
+				WHEN 5 THEN '冻结'
+				WHEN 6 THEN '注销'
+				WHEN 7 THEN '锁定'
+			END as status,
+			
+			CASE ac.oauth_status
+				WHEN 2 THEN '待认证'
+				WHEN 3 THEN '证件已认证'
+				WHEN 4 THEN '认证不通过'
+			END as oauth_status,
+			
+			ac.agent_id as agent_id,
+			date_format(
+				ac.createtime,
+				'%Y-%m-%d %H:%i:%S'
+			) AS createtime,
+			ag.agent_name as agent_name
+		FROM 
+			t_sms_account ac INNER JOIN t_sms_agent_info ag ON ac.agent_id = ag.agent_id
+		WHERE 1 = 1
+		AND 
+		(
+			ac.clientid = #{customerInfo} 
+			or ac.mobile = #{customerInfo}
+			or ac.email = #{customerInfo}
+<!-- 			or ac.name = #{customerInfo}  -->
+		)
+		LIMIT 1
+	</select>
+	
+	
+	<select id="checkDiscountInfo" resultType="map">
+		select 
+			id
+		from 
+		t_sms_client_product
+		where 1 = 1
+		and client_id = #{client_id}
+		and agent_id = #{agent_id}
+		and product_id = #{product_id}
+	</select>
+	
+	<select id="getIdentifyByClientId" resultType="map">
+		SELECT identify FROM t_sms_account WHERE clientid = #{clientId}
+	</select>
+	
+	<!-- 根据extendtype（扩展端口类型）查询该类型当前可用的端口 -->
+	<select id="getExtendPortByType" resultType="map">
+		SELECT
+			endnumber,
+			currentnumber,
+			reusenumber
+		FROM
+			t_sms_extendport_assign
+		WHERE extendtype = #{extendtype}
+	</select>
+	
+	<!-- 根据端口类型将扩展端口加1 -->
+	<update id="updateExtendportCurrentNum">
+		UPDATE t_sms_extendport_assign
+		SET currentnumber = currentnumber + 1
+		WHERE
+			extendtype = #{extendtype}
+	</update>
+	
+	<!-- 更新扩展端口状态 -->
+	<update id="updateExtendtypeStatus">
+		UPDATE t_sms_extendport_assign
+		SET status = #{status}
+		WHERE
+			extendtype = #{extendtype}
+	</update>
+	
+	<update id="updateExtendportReuseNum">
+		UPDATE t_sms_extendport_assign
+		SET reusenumber = #{reusenumber},
+			status = 0
+		WHERE
+			extendtype = #{extendtype}
+	</update>
+	
+	<update id="updateExtendportReuseNum2">
+		UPDATE t_sms_extendport_assign
+		SET reusenumber = CONCAT(#{extendport}, IF(reusenumber = '', '', ','), reusenumber),
+			status = 0
+		WHERE
+			extendtype = #{extendtype}
+	</update>
+	
+	<select id="queryAgentType" resultType="string">
+		SELECT
+			agent_type
+		FROM
+			t_sms_agent_info
+		WHERE agent_id = #{agent_id}
+		LIMIT 1
+	</select>
+	
+	<!-- 查询代理商的所属销售 -->
+	<select id="getAgentBelongSale" resultType="string">
+		SELECT belong_sale FROM t_sms_agent_info WHERE agent_id = #{agent_id}
+	</select>
+	
+	<select id="getAgentType" resultType="string">
+		SELECT agent_type FROM t_sms_agent_info WHERE agent_id = #{agentId}
+	</select>
+	
+	<select id="getAgentIdByClientId" resultType="java.lang.String">
+		SELECT
+			agent_id
+		FROM
+			t_sms_account
+		WHERE
+			clientid = #{clientid}
+	</select>
+	
+	<select id="getAgentTypeByAgentId" resultType="int">
+		SELECT
+			agent_type
+		FROM
+			t_sms_agent_info
+		WHERE
+			agent_id = #{agent_id}
+	</select>
+	
+	<select id="getOemDataConfig" resultType="map">
+		SELECT
+			id,
+			test_product_id,
+			test_sms_number
+		FROM
+			t_sms_oem_data_config
+		WHERE
+			agent_id = #{agent_id}
+	</select>
+	
+	<select id="getOemProductInfoByProductId" resultType="map">
+		SELECT
+			status,
+			unit_price,
+			product_type,
+			due_time,
+			product_id,
+			product_code,
+			product_name,
+			operator_code,
+			area_code
+		FROM
+			t_sms_oem_product_info
+		WHERE
+			product_id = #{product_id}
+	</select>
+	
+	<select id="getAgentAccountByAgentId" resultType="map">
+		SELECT
+			balance
+		FROM
+			t_sms_agent_account
+		WHERE
+			agent_id = #{agent_id}
+	</select>
+	
+	<insert id="createAgentBalanceBill">
+		INSERT INTO `t_sms_agent_balance_bill` (
+			`id`,
+			`agent_id`,
+			`payment_type`,
+			`financial_type`,
+			`amount`,
+			`balance`,
+			`create_time`,
+			`order_id`,
+			`admin_id`,
+			`client_id`,
+			`remark`
+		)
+		VALUES
+			(
+				#{id},
+				#{agent_id},
+				#{payment_type},
+				#{financial_type},
+				#{amount},
+				#{balance},
+				#{create_time},
+				#{order_id},
+				#{admin_id},
+				#{client_id},
+				#{remark}
+			)
+	</insert>
+	
+	<select id="getAgentPoolIdByCondition" resultType="map">
+		SELECT
+			agent_pool_id
+		FROM
+			t_sms_oem_agent_pool
+		WHERE
+			agent_id = #{agent_id}
+			AND product_type = #{product_type}
+			AND due_time = #{due_time}
+			AND unit_price = #{unit_price}
+			AND status = #{status}
+			AND operator_code = #{operator_code}
+			AND area_code = #{area_code}
+		ORDER BY agent_pool_id DESC LIMIT 1
+	</select>
+
+	<select id="getClientPoolIdByCondition" resultType="map">
+		SELECT
+			client_pool_id
+		FROM
+			t_sms_oem_client_pool
+		WHERE
+			client_id = #{client_id}
+		AND product_type = #{product_type}
+		AND due_time = #{due_time}
+		AND unit_price = #{unit_price}
+		AND status = #{status}
+		AND operator_code = #{operator_code}
+		AND area_code = #{area_code}
+		ORDER BY client_pool_id DESC LIMIT 1
+	</select>
+
+	<update id="updateClientPoolByCondition">
+		UPDATE
+			t_sms_oem_client_pool
+		SET
+			total_number = total_number + #{test_num},
+			remain_number = remain_number + #{test_num},
+			remain_test_number = remain_test_number + #{test_num}
+		WHERE
+			client_pool_id = #{client_pool_id}
+
+	</update>
+
+
+	<insert id="createOemAgentPool" useGeneratedKeys="true" keyProperty="agent_pool_id">
+		INSERT INTO `t_sms_oem_agent_pool` (
+			`agent_pool_id`,
+			`agent_id`,
+			`product_type`,
+			`operator_code`,
+			`area_code`,
+			`due_time`,
+			`status`,
+			`remain_number`,
+			`unit_price`,
+			`remain_amount`,
+			`update_time`,
+			`remark`
+		)
+		VALUES
+			(
+				#{agent_pool_id},
+				#{agent_id},
+				#{product_type},
+				#{operator_code},
+				#{area_code},
+				#{due_time},
+				#{status},
+				#{remain_number},
+				#{unit_price},
+				#{remain_amount},
+				#{update_time},
+				#{remark}
+			);
+	</insert>
+
+	<insert id="createOemClientPool" useGeneratedKeys="true" keyProperty="client_pool_id">
+		INSERT INTO `t_sms_oem_client_pool` (
+			`client_pool_id`,
+			`client_id`,
+			`product_type`,
+			`operator_code`,
+			`area_code`,
+			`due_time`,
+			`status`,
+			`total_number`,
+			`remain_number`,
+			`unit_price`,
+			`total_amount`,
+			`remain_amount`,
+			`remain_test_number`,
+			`update_time`,
+			`remark`
+		)
+		VALUES
+			(
+				#{client_pool_id},
+				#{client_id},
+				#{product_type},
+				#{operator_code},
+				#{area_code},
+				#{due_time},
+				#{status},
+				#{total_number},
+				#{remain_number},
+				#{unit_price},
+				#{total_amount},
+				#{remain_amount},
+				#{remain_test_number},
+				#{update_time},
+				#{remark}
+			)
+	</insert>
+
+	<select id="getOemAgentOrderTheMostNumForMinute" resultType="string">
+		SELECT
+			MAX(substring(CONCAT(t.order_id,""),14)) as num
+		FROM
+			t_sms_oem_agent_order t
+		WHERE
+			1 = 1
+			AND
+			t.order_id like CONCAT('${orderIdPre}','%' )
+	</select>
+
+	<select id="getOemClientOrderTheMostNumForMinute" resultType="string">
+		SELECT
+	  		MAX(substring(CONCAT(t.order_id,""),14)) as num
+	  	FROM
+	  		t_sms_oem_client_order t
+	  	WHERE 1 = 1
+	  	AND t.order_id like CONCAT('${orderIdPre}','%' )
+	</select>
+
+
+	<insert id="insertOemAgentOrder">
+		INSERT INTO `t_sms_oem_agent_order` (
+			`order_id`,
+			`order_no`,
+			`order_type`,
+			`product_id`,
+			`product_code`,
+			`product_type`,
+			`operator_code`,
+			`area_code`,
+			`product_name`,
+			`unit_price`,
+			`order_number`,
+			`order_amount`,
+			`product_price`,
+			`agent_id`,
+			`client_id`,
+			`name`,
+			`agent_pool_id`,
+			`due_time`,
+			`create_time`,
+			`remark`
+		)
+		VALUES
+			(
+				#{order_id},
+				#{order_no},
+				#{order_type},
+				#{product_id},
+				#{product_code},
+				#{product_type},
+				#{operator_code},
+				#{area_code},
+				#{product_name},
+				#{unit_price},
+				#{order_number},
+				#{order_amount},
+				#{product_price},
+				#{agent_id},
+				#{client_id},
+				#{name},
+				#{agent_pool_id},
+				#{due_time},
+				#{create_time},
+				#{remark}
+			)
+	</insert>
+	
+	
+	<insert id="insertOemClientOrder">
+
+		INSERT INTO `t_sms_oem_client_order` (
+			`order_id`,
+			`order_no`,
+			`product_type`,
+			`operator_code`,
+			`area_code`,
+			`order_type`,
+			`order_number`,
+			`unit_price`,
+			`order_price`,
+			`client_id`,
+			`agent_id`,
+			`client_pool_id`,
+			`due_time`,
+			`create_time`,
+			`remark`
+		)
+		VALUES
+			(
+				#{order_id},
+				#{order_no},
+				#{product_type},
+				#{operator_code},
+				#{area_code},
+				#{order_type},
+				#{order_number},
+				#{unit_price},
+				#{order_price},
+				#{client_id},
+				#{agent_id},
+				#{client_pool_id},
+				#{due_time},
+				#{create_time},
+				#{remark}
+			);
+	</insert>
+	
+	<select id="getRealName" resultType="string">
+		select realname from t_sms_account where clientid = #{clientid}
+	</select>
+
+</mapper> 

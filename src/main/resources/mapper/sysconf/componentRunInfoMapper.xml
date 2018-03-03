@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统配置-系统参数 -->
+<mapper namespace="componentRunInfo">
+
+	<sql id="queryCondition">
+		<if test="component_name != null and component_name != ''">
+			and component_name like '%${component_name}%' 
+		</if>
+		<if test="info_content != null and info_content != ''">
+			and info_content like '%${info_content}%' 
+		</if>
+		<if test="info_type != null and info_type != ''">
+			and info_type = #{info_type} 
+		</if>
+		<if test="start_time != null and start_time != ''">
+			and update_date >= STR_TO_DATE(#{start_time},'%Y-%m-%d %T')
+		</if>
+		<if test="end_time != null and end_time != ''">
+			and update_date <![CDATA[<= STR_TO_DATE(#{end_time},'%Y-%m-%d %T') ]]>
+		</if>
+	</sql>
+
+	<select id="query" resultType="map">
+		SELECT
+			id,
+			component_name,
+			info_content,
+			info_type,
+			CASE info_type
+				WHEN 0 THEN "队列长度"
+				WHEN 1 THEN "TCP连接数"
+			END AS info_type_name,
+			DATE_FORMAT(update_date, '%Y-%m-%d %T') AS update_date
+		FROM
+			${table_name}
+		<where>
+			<include refid="queryCondition"/>
+		</where>
+		ORDER BY
+			update_date DESC
+		${limit}
+	</select>
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(0) AS totalCount
+		FROM
+			${table_name}
+		<where>
+			<include refid="queryCondition"/>
+		</where>
+	</select>
+	
+</mapper> 

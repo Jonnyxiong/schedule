@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 账户管理 -->
+<mapper namespace="accountLockInfo">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="text != null">
+			    (
+				    a.clientid LIKE TRIM(CONCAT('%',#{text},'%'))
+					OR
+					a.code = TRIM(#{text})
+			    )
+			</if>
+			<if test="status != null ">
+				AND 
+				a.status = #{status}
+			</if>
+		</where>
+	</sql>
+
+	<!-- 获取所有账户信息 -->
+	<select id="query" resultType="map">
+		SELECT
+			a.clientid,
+			DATE_FORMAT(a.locktime,'%y-%m-%d %T') as locktime,
+			DATE_FORMAT(a.unlocktime,'%y-%m-%d %T') as unlocktime,
+			a.code,
+			a.remarks,
+			a.unlockby,
+			a. status
+		FROM
+			t_sms_account_login_status a
+			
+		<include refid="queryCommon"/>
+		
+		ORDER BY a.locktime DESC
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			COUNT(1) AS totalCount
+		FROM
+			t_sms_account_login_status a
+		<include refid="queryCommon"/>
+	</select>
+		
+	<insert id="insertAccountLockInfo">
+		INSERT INTO t_sms_account_login_status (
+			id,
+			clientid,
+			status,
+			updatetime
+		)
+		VALUE(
+			NULL,
+			#{clientid},
+			1,
+			NOW()
+		)
+	</insert>
+	
+
+	
+	<update id="updateAccountLockStatus">
+		UPDATE t_sms_account_login_status a
+			SET
+			a.unlocktime = NOW(),
+			a.unlockby = #{operator},
+			a.status = 1,
+			a.updatetime = NOW()
+		WHERE a.clientid = #{clientid} AND status = 0
+	</update>
+	
+	<update id="unlockAccount">
+		UPDATE t_sms_account a
+			SET a.status = 1
+		WHERE a.clientid = #{clientid}
+	</update>
+	
+</mapper> 

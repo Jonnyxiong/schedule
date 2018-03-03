@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 系统设置-审核超频关键字 -->
+<mapper namespace="auditKeyWords">
+
+	<sql id="queryCommon">
+		<where>
+			<if test="keyword != null and keyword != ''">
+				keyword LIKE CONCAT('%', #{keyword}, '%')
+			</if>
+			<if test="clientid != null and clientid !=''">
+				AND
+				clientid LIKE CONCAT('%', #{clientid}, '%')
+			</if>
+			<if test="type != null and type !=''">
+				AND
+				type = #{type}
+			</if>
+		</where>
+	</sql>
+	
+	<select id="query" resultType="map">
+		SELECT
+			id,
+			keyword,
+			clientid,
+			type,
+			remarks,
+			date_format(
+				update_date,
+				'%Y-%m-%d %H:%i:%S'
+			) AS update_date
+		FROM
+			t_sms_audit_keyword_list
+		<include refid="queryCommon" />
+		${limit}
+	</select>
+	
+	<select id="queryCount" resultType="map">
+		SELECT
+			count(1) AS totalCount
+		FROM
+			t_sms_audit_keyword_list
+		<include refid="queryCommon" />
+	</select>
+	
+	<select id="getOneInfo" resultType="map">
+		SELECT
+			id,
+			keyword,
+			clientid,
+			type,
+			remarks,
+			update_date
+		FROM
+			t_sms_audit_keyword_list
+		WHERE
+			id = #{id}
+	</select>
+	
+	<select id="saveCheck" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			t_sms_audit_keyword_list
+		WHERE
+			keyword = #{keyword} 
+		AND (clientid = #{clientid} OR clientid = '*')
+		AND type = #{type}
+		<if test="id != null">
+			AND id != #{id}
+		</if>
+	</select>
+	
+	<insert id="insert"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO `t_sms_audit_keyword_list` (
+			`keyword`,
+			`clientid`,
+			`type`,
+			`remarks`,
+			`update_date`
+		)
+		VALUES
+			(
+				#{keyword},
+				#{clientid},
+				#{type},
+				#{remarks},
+				NOW()
+			)
+	</insert>
+	
+	<update id="update">
+		UPDATE `t_sms_audit_keyword_list`
+		SET
+		 `keyword` = #{keyword},
+		 `clientid` = #{clientid},
+		 `type` = #{type},
+		 `remarks` = #{remarks},
+		 `update_date` = NOW()
+		WHERE
+			id = #{id}
+	</update>
+	
+	<delete id="delete">
+		DELETE FROM `t_sms_audit_keyword_list` WHERE id = #{id}
+	</delete>
+	
+	<select id="queryExportExcelData" resultType="map">
+		SELECT
+			keyword,
+			clientid,
+			CASE type
+			WHEN 0 THEN
+				"审核关键字"
+			WHEN 1 THEN
+				"超频关键字"
+			END AS type,
+			remarks
+		FROM
+			t_sms_audit_keyword_list
+		<include refid="queryCommon" />
+	</select>
+	
+</mapper> 
